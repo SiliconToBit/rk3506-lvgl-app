@@ -1,0 +1,1 @@
+GEN_CSRCS += lv_font_puhui_64.c lv_font_montserratMedium_16.c lv_font_puhui_32.c lv_font_montserratMedium_12.c lv_font_puhui_24.c lv_font_puhui_16.c lv_font_qweather_icons_128.c lv_font_qweather_icons_32.c lv_font_puhui_12.c lv_font_puhui_18.c

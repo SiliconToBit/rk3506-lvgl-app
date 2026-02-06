@@ -1,0 +1,1 @@
+/home/gm/Workspace/linux_sdk/luckfox_rk3506_sdk/overlay/root/lvgl_demo
