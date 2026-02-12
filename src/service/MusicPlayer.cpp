@@ -7,10 +7,11 @@
 #include <sstream>
 #include <sys/stat.h>
 
-#include "./ui/generated/events_init.h"
-#include "./ui/generated/gui_guider.h"
-
-MusicPlayer::MusicPlayer() : currentIndex(-1), running(false), paused(false), stopRequest(false)
+MusicPlayer::MusicPlayer()
+    : m_currentIndex(-1)
+    , m_running(false)
+    , m_paused(false)
+    , m_stopRequest(false)
 {
 }
 
@@ -19,176 +20,160 @@ MusicPlayer::~MusicPlayer()
     stop();
 }
 
-void MusicPlayer::scanDirectory(const std::string &dirPath)
+void MusicPlayer::scanDirectory(const std::string& dirPath)
 {
-    playlist.clear();
-    currentIndex = -1;
+    m_playlist.clear();
+    m_currentIndex = -1;
 
-    DIR *dir = opendir(dirPath.c_str());
+    DIR* dir = opendir(dirPath.c_str());
     if (dir == nullptr)
     {
         std::cerr << "Failed to open directory: " << dirPath << std::endl;
         return;
     }
 
-    struct dirent *entry;
+    struct dirent* entry;
     while ((entry = readdir(dir)) != nullptr)
     {
         std::string filename = entry->d_name;
-        // 简单的后缀检查，支持 wav 和 mp3
         if (filename.length() > 4)
         {
             std::string ext = filename.substr(filename.length() - 4);
-            // 转换为小写比较
             std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
             if (ext == ".wav" || ext == ".mp3")
             {
-                // 存储完整路径
                 std::string fullPath = dirPath;
                 if (fullPath.back() != '/')
                     fullPath += "/";
                 fullPath += filename;
-                playlist.push_back(fullPath);
+                m_playlist.push_back(fullPath);
             }
         }
     }
     closedir(dir);
 
-    // 排序播放列表
-    std::sort(playlist.begin(), playlist.end());
+    std::sort(m_playlist.begin(), m_playlist.end());
 
-    std::cout << "Found " << playlist.size() << " songs." << std::endl;
-    if (!playlist.empty())
+    std::cout << "Found " << m_playlist.size() << " songs." << std::endl;
+    if (!m_playlist.empty())
     {
-        currentIndex = 0;
+        m_currentIndex = 0;
     }
 }
 
-const std::vector<std::string> &MusicPlayer::getPlaylist() const
+const std::vector<std::string>& MusicPlayer::getPlaylist() const
 {
-    return playlist;
+    return m_playlist;
 }
 
 void MusicPlayer::playbackLoop(std::string filepath)
 {
-    if (!decoder.open(filepath.c_str()))
+    if (!m_decoder.open(filepath.c_str()))
     {
         std::cerr << "Failed to open file: " << filepath << std::endl;
-        running = false;
+        m_running = false;
         return;
     }
 
-    // Assuming 44100Hz Stereo 16bit as per MediaDecoder implementation
-    if (!audioDevice.open(44100, 2))
+    if (!m_audioDevice.open(44100, 2))
     {
         std::cerr << "Failed to open audio device" << std::endl;
-        decoder.close();
-        running = false;
+        m_decoder.close();
+        m_running = false;
         return;
     }
 
     std::cout << "Start playing: " << filepath << std::endl;
 
-    while (!stopRequest)
+    while (!m_stopRequest)
     {
-        // Handle Pause
         {
-            std::unique_lock<std::mutex> lock(playMutex);
-            while (paused && !stopRequest)
+            std::unique_lock<std::mutex> lock(m_playMutex);
+            while (m_paused && !m_stopRequest)
             {
-                playCv.wait(lock);
+                m_playCv.wait(lock);
             }
         }
 
-        if (stopRequest)
+        if (m_stopRequest)
             break;
 
-        bool success = decoder.decode([this](uint8_t *data, int size) {
-            if (stopRequest)
+        bool success = m_decoder.decode([this](uint8_t* data, int size) {
+            if (m_stopRequest)
                 return;
-            // Write to ALSA
-            // size is in bytes. frames = size / (channels * bytes_per_sample)
-            // 16bit stereo = 4 bytes per frame
             snd_pcm_uframes_t frames = size / 4;
-            snd_pcm_sframes_t written = audioDevice.write(data, frames);
+            snd_pcm_sframes_t written = m_audioDevice.write(data, frames);
             if (written < 0)
             {
-                audioDevice.prepare(); // Recover from underrun
+                m_audioDevice.prepare();
             }
         });
 
         if (!success)
         {
-            // End of file or error
             break;
         }
     }
 
-    decoder.close();
-    audioDevice.close();
-    running = false;
+    m_decoder.close();
+    m_audioDevice.close();
+    m_running = false;
     std::cout << "Playback finished: " << filepath << std::endl;
 }
 
-void MusicPlayer::playFile(const std::string &filepath)
+void MusicPlayer::playFile(const std::string& filepath)
 {
-    stop(); // Ensure previous thread is stopped
+    stop();
 
-    stopRequest = false;
-    paused = false;
-    running = true;
+    m_stopRequest = false;
+    m_paused = false;
+    m_running = true;
 
-    // 解析歌词
     std::string lrcContent = getCurrentSongLyrics();
     parseLrc(lrcContent);
 
-    // Start new thread
-    playbackThread = std::thread(&MusicPlayer::playbackLoop, this, filepath);
+    m_playbackThread = std::thread(&MusicPlayer::playbackLoop, this, filepath);
 }
 
 void MusicPlayer::play(int index)
 {
-    if (index >= 0 && index < playlist.size())
+    if (index >= 0 && index < m_playlist.size())
     {
-        currentIndex = index;
-        playFile(playlist[currentIndex]);
+        m_currentIndex = index;
+        playFile(m_playlist[m_currentIndex]);
     }
 }
 
-void MusicPlayer::play(const std::string &filename)
+void MusicPlayer::play(const std::string& filename)
 {
     playFile(filename);
 }
 
 void MusicPlayer::play()
 {
-    if (currentIndex >= 0 && currentIndex < playlist.size())
+    if (m_currentIndex >= 0 && m_currentIndex < m_playlist.size())
     {
-        playFile(playlist[currentIndex]);
+        playFile(m_playlist[m_currentIndex]);
     }
 }
 
 void MusicPlayer::play(double time)
 {
-    decoder.seek(time);
+    m_decoder.seek(time);
 }
 
 void MusicPlayer::loadMusic(int index)
 {
-    if (index >= 0 && index < playlist.size())
+    if (index >= 0 && index < m_playlist.size())
     {
-        currentIndex = index;
-        // 停止当前播放（如果有）
+        m_currentIndex = index;
         stop();
 
-        // 仅打开解码器，不启动播放线程
-        std::string filepath = playlist[currentIndex];
-        if (decoder.open(filepath.c_str()))
+        std::string filepath = m_playlist[m_currentIndex];
+        if (m_decoder.open(filepath.c_str()))
         {
             std::cout << "Loaded music: " << filepath << std::endl;
-            // 可以在这里获取封面等元数据
-            // setAlbumCover(filepath);
         }
         else
         {
@@ -199,88 +184,87 @@ void MusicPlayer::loadMusic(int index)
 
 void MusicPlayer::pause()
 {
-    if (running && !paused)
+    if (m_running && !m_paused)
     {
-        paused = true;
-        playCv.notify_all();
+        m_paused = true;
+        m_playCv.notify_all();
     }
 }
 
 void MusicPlayer::resume()
 {
-    if (running && paused)
+    if (m_running && m_paused)
     {
-        paused = false;
-        playCv.notify_all();
+        m_paused = false;
+        m_playCv.notify_all();
     }
 }
 
 void MusicPlayer::stop()
 {
-    stopRequest = true;
-    paused = false; // Break wait loop
-    playCv.notify_all();
+    m_stopRequest = true;
+    m_paused = false;
+    m_playCv.notify_all();
 
-    if (playbackThread.joinable())
+    if (m_playbackThread.joinable())
     {
-        playbackThread.join();
+        m_playbackThread.join();
     }
-    running = false;
+    m_running = false;
 }
 
 void MusicPlayer::next()
 {
-    if (playlist.empty())
+    if (m_playlist.empty())
         return;
 
-    currentIndex++;
-    if (currentIndex >= playlist.size())
+    m_currentIndex++;
+    if (m_currentIndex >= m_playlist.size())
     {
-        currentIndex = 0; // 循环播放
+        m_currentIndex = 0;
     }
 
     if (isPlaying())
     {
-        play(currentIndex);
+        play(m_currentIndex);
     }
     else
     {
-        loadMusic(currentIndex);
+        loadMusic(m_currentIndex);
     }
 }
 
 void MusicPlayer::prev()
 {
-    if (playlist.empty())
+    if (m_playlist.empty())
         return;
 
-    currentIndex--;
-    if (currentIndex < 0)
+    m_currentIndex--;
+    if (m_currentIndex < 0)
     {
-        currentIndex = playlist.size() - 1; // 循环播放
+        m_currentIndex = m_playlist.size() - 1;
     }
 
     if (isPlaying())
     {
-        play(currentIndex);
+        play(m_currentIndex);
     }
     else
     {
-        loadMusic(currentIndex);
+        loadMusic(m_currentIndex);
     }
 }
 
 bool MusicPlayer::isPlaying() const
 {
-    return running && !paused;
+    return m_running && !m_paused;
 }
 
 std::string MusicPlayer::getCurrentSongName() const
 {
-    if (currentIndex >= 0 && currentIndex < playlist.size())
+    if (m_currentIndex >= 0 && m_currentIndex < m_playlist.size())
     {
-        // 只返回文件名，不包含路径
-        std::string path = playlist[currentIndex];
+        std::string path = m_playlist[m_currentIndex];
         size_t lastSlash = path.find_last_of('/');
         if (lastSlash != std::string::npos)
         {
@@ -293,9 +277,9 @@ std::string MusicPlayer::getCurrentSongName() const
 
 std::string MusicPlayer::getCurrentSongLyrics() const
 {
-    if (currentIndex >= 0 && currentIndex < playlist.size())
+    if (m_currentIndex >= 0 && m_currentIndex < m_playlist.size())
     {
-        std::string audioPath = playlist[currentIndex];
+        std::string audioPath = m_playlist[m_currentIndex];
         size_t lastDot = audioPath.find_last_of('.');
         if (lastDot != std::string::npos)
         {
@@ -317,9 +301,9 @@ std::string MusicPlayer::getCurrentSongLyrics() const
 
 std::string MusicPlayer::getCurrentAlbumCoverPath() const
 {
-    if (currentIndex >= 0 && currentIndex < playlist.size())
+    if (m_currentIndex >= 0 && m_currentIndex < m_playlist.size())
     {
-        std::string audioPath = playlist[currentIndex];
+        std::string audioPath = m_playlist[m_currentIndex];
         size_t lastDot = audioPath.find_last_of('.');
         if (lastDot != std::string::npos)
         {
@@ -339,22 +323,31 @@ std::string MusicPlayer::getCurrentAlbumCoverPath() const
 
 double MusicPlayer::getMusicCurrentTime() const
 {
-    return decoder.getCurrentTime();
+    return m_decoder.getCurrentTime();
 }
 
 double MusicPlayer::getMusicDuration() const
 {
-    return decoder.getDuration();
+    return m_decoder.getDuration();
 }
 
-void MusicPlayer::parseLrc(const std::string &lrcContent)
+void MusicPlayer::setVolume(long volume)
 {
-    currentLyrics.clear();
+    m_audioDevice.setVolume(volume);
+}
+
+long MusicPlayer::getVolume()
+{
+    return m_audioDevice.getVolume();
+}
+
+void MusicPlayer::parseLrc(const std::string& lrcContent)
+{
+    m_currentLyrics.clear();
     std::istringstream stream(lrcContent);
     std::string line;
     while (std::getline(stream, line))
     {
-        // Simple parser for [mm:ss.xx]Lyric
         size_t openBracket = line.find('[');
         size_t closeBracket = line.find(']');
         if (openBracket != std::string::npos && closeBracket != std::string::npos && closeBracket > openBracket)
@@ -362,39 +355,34 @@ void MusicPlayer::parseLrc(const std::string &lrcContent)
             std::string timeStr = line.substr(openBracket + 1, closeBracket - openBracket - 1);
             std::string text = line.substr(closeBracket + 1);
 
-            // Parse time mm:ss.xx
             int min = 0;
             float sec = 0.0f;
             if (sscanf(timeStr.c_str(), "%d:%f", &min, &sec) >= 2)
             {
                 double time = min * 60 + sec;
-                // Remove \r if exists
                 if (!text.empty() && text.back() == '\r')
                 {
                     text.pop_back();
                 }
-                currentLyrics.push_back({time, text});
+                m_currentLyrics.push_back({time, text});
             }
         }
     }
-    // Sort by time just in case
-    std::sort(currentLyrics.begin(), currentLyrics.end(),
-              [](const LyricLine &a, const LyricLine &b) { return a.time < b.time; });
+    std::sort(m_currentLyrics.begin(), m_currentLyrics.end(),
+              [](const LyricLine& a, const LyricLine& b) { return a.time < b.time; });
 }
 
 std::string MusicPlayer::getCurrentLyricLine(double time) const
 {
-    if (currentLyrics.empty())
+    if (m_currentLyrics.empty())
         return "";
 
-    // Find the last lyric that has time <= current time
-    // upper_bound returns first element with time > current time
-    auto it = std::upper_bound(currentLyrics.begin(), currentLyrics.end(), time,
-                               [](double val, const LyricLine &line) { return val < line.time; });
+    auto it = std::upper_bound(m_currentLyrics.begin(), m_currentLyrics.end(), time,
+                               [](double val, const LyricLine& line) { return val < line.time; });
 
-    if (it == currentLyrics.begin())
+    if (it == m_currentLyrics.begin())
     {
-        return ""; // Before first lyric
+        return "";
     }
 
     return std::prev(it)->text;

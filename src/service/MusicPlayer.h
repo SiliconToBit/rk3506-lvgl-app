@@ -1,5 +1,5 @@
-#ifndef MUSIC_PLAYER_HPP
-#define MUSIC_PLAYER_HPP
+#ifndef LVGL_APP_SERVICE_MUSIC_PLAYER_H
+#define LVGL_APP_SERVICE_MUSIC_PLAYER_H
 
 #include "AudioDevice.h"
 #include "MediaDecoder.h"
@@ -12,81 +12,62 @@
 
 class MusicPlayer
 {
-  public:
+public:
     MusicPlayer();
-
     ~MusicPlayer();
 
-    // 扫描指定目录下的音乐文件
-    void scanDirectory(const std::string &dirPath);
-
-    const std::vector<std::string> &getPlaylist() const;
+    void scanDirectory(const std::string& dirPath);
+    const std::vector<std::string>& getPlaylist() const;
 
     void play(int index);
+    void play(const std::string& filename);
+    void play();
+    void play(double time);
 
-    void play(const std::string &filename); // 保留旧接口兼容
-    void play();                            // 播放当前索引
-    void play(double time);                 // 从指定时间点播放
-
-    // 预加载音乐（只打开文件，不播放）
     void loadMusic(int index);
-
     void pause();
-
     void resume();
-
     void stop();
-
     void next();
-
     void prev();
 
     bool isPlaying() const;
-
     std::string getCurrentSongName() const;
-
     std::string getCurrentSongLyrics() const;
-
-    // 获取当前播放歌曲的封面路径
     std::string getCurrentAlbumCoverPath() const;
-
-    // 获取当前播放时间对应的单行歌词
     std::string getCurrentLyricLine(double time) const;
 
-    // 音量控制 (0-100)
     void setVolume(long volume);
     long getVolume();
 
     double getMusicDuration() const;
     double getMusicCurrentTime() const;
 
-  private:
+private:
     struct LyricLine
     {
         double time;
         std::string text;
     };
-    std::vector<LyricLine> currentLyrics;
-    void parseLrc(const std::string &lrcContent);
 
+    std::vector<LyricLine> m_currentLyrics;
+    std::vector<std::string> m_playlist;
+    int m_currentIndex;
+    std::string m_currentSongLyrics;
+
+    std::thread m_playbackThread;
+    std::atomic<bool> m_running;
+    std::atomic<bool> m_paused;
+    std::atomic<bool> m_stopRequest;
+    std::mutex m_playMutex;
+    std::condition_variable m_playCv;
+
+    AudioDevice m_audioDevice;
+    MediaDecoder m_decoder;
+
+    void parseLrc(const std::string& lrcContent);
     void playbackLoop(std::string filepath);
-    void playFile(const std::string &filepath);
-
-    std::vector<std::string> playlist;
-    int currentIndex;
-    std::string currentSongLyrics;
-
-    // 播放控制
-    std::thread playbackThread;
-    std::atomic<bool> running;     // 线程运行标志
-    std::atomic<bool> paused;      // 暂停标志
-    std::atomic<bool> stopRequest; // 停止请求
-    std::mutex playMutex;
-    std::condition_variable playCv;
-
-    // 硬件/解码组件
-    AudioDevice audioDevice;
-    MediaDecoder decoder;
+    void playFile(const std::string& filepath);
 };
 
-#endif // MUSIC_PLAYER_HPP
+#endif // LVGL_APP_SERVICE_MUSIC_PLAYER_H

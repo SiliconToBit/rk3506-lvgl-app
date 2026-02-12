@@ -1,5 +1,5 @@
-#ifndef FONTS_H
-#define FONTS_H
+#ifndef LVGL_APP_FONTS_FONTS_H
+#define LVGL_APP_FONTS_FONTS_H
 
 #ifdef __cplusplus
 extern "C"
@@ -13,4 +13,4 @@ extern "C"
 }
 #endif
 
-#endif // FONTS_H
+#endif // LVGL_APP_FONTS_FONTS_H

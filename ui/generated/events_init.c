@@ -15,7 +15,7 @@
 #include "freemaster_client.h"
 #endif
 
-#include "app_bridge.h"
+#include "AppBridge.h"
 #include "main.h"
 #include "custom.h"
 

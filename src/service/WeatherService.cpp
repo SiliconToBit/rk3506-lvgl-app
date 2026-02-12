@@ -1,4 +1,5 @@
 #include "WeatherService.h"
+#include <cstring>
 #include <curl/curl.h>
 #include <iostream>
 #include <nlohmann/json.hpp>
@@ -8,8 +9,9 @@
 using json = nlohmann::json;
 
 WeatherService::WeatherService(const std::string &apiKey)
-    : apiKey(apiKey), baseUrl("https://pu3qqpnwdn.re.qweatherapi.com")
+    : m_apiKey(apiKey), m_baseUrl("https://pu3qqpnwdn.re.qweatherapi.com")
 {
+    memset(&m_currentData, 0, sizeof(WeatherData));
     curl_global_init(CURL_GLOBAL_DEFAULT);
 }
 
@@ -18,7 +20,7 @@ WeatherService::~WeatherService()
     curl_global_cleanup();
 }
 
-size_t WeatherService::WriteCallback(void *contents, size_t size, size_t nmemb, void *userp)
+size_t WeatherService::writeCallback(void *contents, size_t size, size_t nmemb, void *userp)
 {
     ((std::string *)userp)->append((char *)contents, size * nmemb);
     return size * nmemb;
@@ -34,14 +36,10 @@ std::string WeatherService::performGetRequest(const std::string &url)
     if (curl)
     {
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
-        // 忽略 SSL 证书验证 (仅用于测试，生产环境建议配置 CA 证书)
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-
-        // 【关键】设置 Accept-Encoding 为空字符串，让 libcurl 自动处理所有支持的压缩格式 (gzip, deflate 等)
-        // 并自动解压响应数据
         curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "");
 
         res = curl_easy_perform(curl);
@@ -74,15 +72,13 @@ std::string WeatherService::urlEncode(const std::string &value)
 
 std::string WeatherService::lookupLocationId(const std::string &cityName)
 {
-    // 简单的判断：如果已经是纯数字，直接返回（假设是 Location ID）
     if (cityName.find_first_not_of("0123456789") == std::string::npos)
     {
         return cityName;
     }
 
-    // GeoAPI URL (注意：使用 geoapi.qweather.com)
     std::string encodedCity = urlEncode(cityName);
-    std::string url = baseUrl + "/geo/v2/city/lookup?location=" + encodedCity + "&key=" + apiKey;
+    std::string url = m_baseUrl + "/geo/v2/city/lookup?location=" + encodedCity + "&key=" + m_apiKey;
     std::cout << "Looking up Location ID for: " << cityName << " (Encoded: " << encodedCity << ")..." << std::endl;
 
     std::string response = performGetRequest(url);
@@ -93,7 +89,6 @@ std::string WeatherService::lookupLocationId(const std::string &cityName)
     {
         auto jsonResponse = json::parse(response);
 
-        // 检查是否有 API 错误信息 (如 401 Unauthorized)
         if (jsonResponse.contains("error"))
         {
             std::cerr << "GeoAPI Error: " << jsonResponse["error"].dump() << std::endl;
@@ -126,14 +121,12 @@ std::string WeatherService::lookupLocationId(const std::string &cityName)
 
 void WeatherService::updateWeatherAsync(const std::string &city)
 {
-    // 启动一个线程来模拟网络请求，避免阻塞 UI
     std::thread t([this, city]() { this->fetchFromApi(city); });
     t.detach();
 }
 
 void WeatherService::fetchFromApi(const std::string &city)
 {
-    // 1. 获取 Location ID
     std::string locationId = lookupLocationId(city);
     if (locationId.empty())
     {
@@ -141,15 +134,12 @@ void WeatherService::fetchFromApi(const std::string &city)
         return;
     }
 
-    // 2. 获取当前天气 (和风天气 API)
-    // 注意：city 参数应为 Location ID (如 101010100) 或经纬度
-    std::string weatherUrl = baseUrl + "/v7/weather/now?location=" + locationId + "&key=" + apiKey;
+    std::string weatherUrl = m_baseUrl + "/v7/weather/now?location=" + locationId + "&key=" + m_apiKey;
     std::cout << "Fetching current weather for " << locationId << "..." << std::endl;
     std::string weatherResp = performGetRequest(weatherUrl);
     parseCurrentWeather(weatherResp);
 
-    // 3. 获取天气预报 (3天预报)
-    std::string forecastUrl = baseUrl + "/v7/weather/3d?location=" + locationId + "&key=" + apiKey;
+    std::string forecastUrl = m_baseUrl + "/v7/weather/3d?location=" + locationId + "&key=" + m_apiKey;
     std::cout << "Fetching forecast for " << locationId << "..." << std::endl;
     std::string forecastResp = performGetRequest(forecastUrl);
     parseForecast(forecastResp);
@@ -164,39 +154,38 @@ void WeatherService::parseCurrentWeather(const std::string &response)
     {
         auto jsonResponse = json::parse(response);
 
-        // 检查是否有 API 错误信息
         if (jsonResponse.contains("error"))
         {
             std::cerr << "Weather API Error: " << jsonResponse["error"].dump() << std::endl;
             return;
         }
 
-        // 和风天气 JSON 结构:
-        // { "code": "200", "now": { "temp": "24", "text": "多云", "humidity": "72", ... } }
         std::string code = jsonResponse.value("code", "");
 
         if (code == "200" && jsonResponse.contains("now"))
         {
             auto now = jsonResponse["now"];
-            // 和风返回的数值通常是字符串，需要转换
             try
             {
-                currentData.temperature = std::stoi(now.value("temp", "0"));
-                currentData.humidity = std::stoi(now.value("humidity", "0"));
-                currentData.feelsLike = std::stoi(now.value("feelsLike", "0"));
-                currentData.windDir = now.value("windDir", "0");
-                currentData.windSpeed = std::stoi(now.value("windSpeed", "0"));
-                currentData.iconCode = std::stoi(now.value("icon", "0"));
-                currentData.windSpeed = std::stoi(now.value("windSpeed", "0"));
+                m_currentData.temperature = std::stoi(now.value("temp", "0"));
+                m_currentData.humidity = std::stoi(now.value("humidity", "0"));
+                m_currentData.feelsLike = std::stoi(now.value("feelsLike", "0"));
+                m_currentData.windSpeed = std::stoi(now.value("windSpeed", "0"));
+                m_currentData.iconCode = std::stoi(now.value("icon", "0"));
+
+                std::string windDir = now.value("windDir", "Unknown");
+                strncpy(m_currentData.windDir, windDir.c_str(), sizeof(m_currentData.windDir) - 1);
+                m_currentData.windDir[sizeof(m_currentData.windDir) - 1] = '\0';
+
+                std::string weather = now.value("text", "Unknown");
+                strncpy(m_currentData.weather, weather.c_str(), sizeof(m_currentData.weather) - 1);
+                m_currentData.weather[sizeof(m_currentData.weather) - 1] = '\0';
             }
             catch (...)
             {
-                currentData.temperature = 0.0f;
-                currentData.humidity = 0.0f;
+                m_currentData.temperature = 0;
+                m_currentData.humidity = 0;
             }
-            currentData.weather = now.value("text", "Unknown");
-            // 和风实时天气接口不返回城市名，这里暂时保留原值或设为未知
-            // currentData.city = ...;
         }
         else
         {
@@ -204,7 +193,7 @@ void WeatherService::parseCurrentWeather(const std::string &response)
             std::cerr << "Response: " << response << std::endl;
         }
 
-        std::cout << "Current Weather: " << currentData.temperature << "C, " << currentData.weather << std::endl;
+        std::cout << "Current Weather: " << m_currentData.temperature << "C, " << m_currentData.weather << std::endl;
     }
     catch (json::parse_error &e)
     {
@@ -222,36 +211,46 @@ void WeatherService::parseForecast(const std::string &response)
     {
         auto jsonResponse = json::parse(response);
 
-        // 检查是否有 API 错误信息
         if (jsonResponse.contains("error"))
         {
             std::cerr << "Forecast API Error: " << jsonResponse["error"].dump() << std::endl;
             return;
         }
 
-        // 和风天气预报结构: { "code": "200", "daily": [ { "fxDate": "...", "tempMax": "...", ... } ] }
         std::string code = jsonResponse.value("code", "");
 
         if (code == "200" && jsonResponse.contains("daily") && !jsonResponse["daily"].empty())
         {
             auto firstDay = jsonResponse["daily"][0];
-            currentData.day1_fxDate = firstDay.value("fxDate", "");
-            currentData.day1_tempMin = std::stoi(firstDay.value("tempMin", "0"));
-            currentData.day1_tempMax = std::stoi(firstDay.value("tempMax", "0"));
-            currentData.day1_windDir = firstDay.value("windDirDay", "");
-            currentData.day2_iconCode = std::stoi(firstDay.value("iconDay", "0"));
+            std::string fxDate = firstDay.value("fxDate", "");
+            strncpy(m_currentData.day1_fxDate, fxDate.c_str(), sizeof(m_currentData.day1_fxDate) - 1);
+            m_currentData.day1_fxDate[sizeof(m_currentData.day1_fxDate) - 1] = '\0';
+
+            m_currentData.day1_tempMin = std::stoi(firstDay.value("tempMin", "0"));
+            m_currentData.day1_tempMax = std::stoi(firstDay.value("tempMax", "0"));
+            m_currentData.day1_iconCode = std::stoi(firstDay.value("iconDay", "0"));
+
+            std::string windDir = firstDay.value("windDirDay", "");
+            strncpy(m_currentData.day1_windDir, windDir.c_str(), sizeof(m_currentData.day1_windDir) - 1);
+            m_currentData.day1_windDir[sizeof(m_currentData.day1_windDir) - 1] = '\0';
 
             auto secondDay = jsonResponse["daily"][1];
-            currentData.day2_tempMin = std::stoi(secondDay.value("tempMin", "0"));
-            currentData.day2_tempMax = std::stoi(secondDay.value("tempMax", "0"));
-            currentData.day2_windDir = secondDay.value("windDirDay", "");
-            currentData.day2_iconCode = std::stoi(secondDay.value("iconDay", "0"));
+            m_currentData.day2_tempMin = std::stoi(secondDay.value("tempMin", "0"));
+            m_currentData.day2_tempMax = std::stoi(secondDay.value("tempMax", "0"));
+            m_currentData.day2_iconCode = std::stoi(secondDay.value("iconDay", "0"));
+
+            windDir = secondDay.value("windDirDay", "");
+            strncpy(m_currentData.day2_windDir, windDir.c_str(), sizeof(m_currentData.day2_windDir) - 1);
+            m_currentData.day2_windDir[sizeof(m_currentData.day2_windDir) - 1] = '\0';
 
             auto thirdDay = jsonResponse["daily"][2];
-            currentData.day3_tempMin = std::stoi(thirdDay.value("tempMin", "0"));
-            currentData.day3_tempMax = std::stoi(thirdDay.value("tempMax", "0"));
-            currentData.day3_windDir = thirdDay.value("windDirDay", "");
-            currentData.day3_iconCode = std::stoi(thirdDay.value("iconDay", "0"));
+            m_currentData.day3_tempMin = std::stoi(thirdDay.value("tempMin", "0"));
+            m_currentData.day3_tempMax = std::stoi(thirdDay.value("tempMax", "0"));
+            m_currentData.day3_iconCode = std::stoi(thirdDay.value("iconDay", "0"));
+
+            windDir = thirdDay.value("windDirDay", "");
+            strncpy(m_currentData.day3_windDir, windDir.c_str(), sizeof(m_currentData.day3_windDir) - 1);
+            m_currentData.day3_windDir[sizeof(m_currentData.day3_windDir) - 1] = '\0';
         }
         else
         {
@@ -268,5 +267,5 @@ void WeatherService::parseForecast(const std::string &response)
 
 WeatherData WeatherService::getWeatherData() const
 {
-    return currentData;
+    return m_currentData;
 }

@@ -1,5 +1,4 @@
 #include "main.h"
-#include "app_bridge.h"
 #include <lvgl/lv_conf.h>
 #include <lvgl/lvgl.h>
 #include <lvgl/src/extra/libs/fsdrv/lv_fsdrv.h>
@@ -8,7 +7,7 @@
 #include "./ui/generated/gui_guider.h"
 
 #include "AudioDevice.h"
-#include "app_bridge.h"
+#include "AppBridge.h"
 #include "custom.h"
 
 

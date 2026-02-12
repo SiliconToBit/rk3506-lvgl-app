@@ -1,73 +1,57 @@
-#ifndef WEATHER_SERVICE_HPP
-#define WEATHER_SERVICE_HPP
+#ifndef LVGL_APP_SERVICE_WEATHER_SERVICE_H
+#define LVGL_APP_SERVICE_WEATHER_SERVICE_H
 
-#include "nlohmann/json.hpp"
-#include <functional>
 #include <string>
 
-// 天气数据结构
 struct WeatherData
 {
-    std::string city;
-    std::string weather;
+    char city[64];
+    char weather[64];
     int iconCode;
     int temperature;
     int humidity;
     int feelsLike;
-    std::string windDir;
+    char windDir[64];
     int windSpeed;
 
-    int day1_iconCode;
+    char day1_fxDate[16];
     int day1_tempMin;
     int day1_tempMax;
-    std::string day1_windDir;
-    std::string day1_fxDate;
+    char day1_windDir[64];
+    int day1_iconCode;
 
-    int day2_iconCode;
     int day2_tempMin;
     int day2_tempMax;
-    std::string day2_windDir;
+    char day2_windDir[64];
+    int day2_iconCode;
 
-    int day3_iconCode;
     int day3_tempMin;
     int day3_tempMax;
-    std::string day3_windDir;
+    char day3_windDir[64];
+    int day3_iconCode;
 };
 
 class WeatherService
 {
-  public:
-    WeatherService(const std::string &apiKey = "4661897787bc49c793207316caf28304");
+public:
+    explicit WeatherService(const std::string& apiKey);
     ~WeatherService();
 
-    // 异步更新天气
-    void updateWeatherAsync(const std::string &city = "广州");
-
-    // 获取当前天气数据
+    void updateWeatherAsync(const std::string& city);
     WeatherData getWeatherData() const;
 
-  private:
-    std::string apiKey;
-    const std::string baseUrl;
-    WeatherData currentData;
+private:
+    std::string m_apiKey;
+    std::string m_baseUrl;
+    WeatherData m_currentData;
 
-    // Libcurl 的回调函数 (必须是 static)
-    static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp);
-
-    // 内部帮助函数：发送 HTTP GET 请求
-    std::string performGetRequest(const std::string &url);
-
-    // URL 编码
-    std::string urlEncode(const std::string &value);
-
-    // GeoAPI 城市查找
-    std::string lookupLocationId(const std::string &cityName);
-
-    void fetchFromApi(const std::string &city);
-
-    // 解析不同类型的响应
-    void parseCurrentWeather(const std::string &payload);
-    void parseForecast(const std::string &payload);
+    static size_t writeCallback(void* contents, size_t size, size_t nmemb, void* userp);
+    std::string performGetRequest(const std::string& url);
+    std::string urlEncode(const std::string& value);
+    std::string lookupLocationId(const std::string& cityName);
+    void fetchFromApi(const std::string& city);
+    void parseCurrentWeather(const std::string& response);
+    void parseForecast(const std::string& response);
 };
 
-#endif // WEATHER_SERVICE_HPP
+#endif // LVGL_APP_SERVICE_WEATHER_SERVICE_H

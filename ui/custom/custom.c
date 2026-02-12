@@ -11,7 +11,7 @@
  *      INCLUDES
  *********************/
 #include "custom.h"
-#include "app_bridge.h"
+#include "AppBridge.h"
 #include "fonts.h"
 #include "lvgl.h"
 #include "main.h" // 引入 main.h 以使用 font_style_32

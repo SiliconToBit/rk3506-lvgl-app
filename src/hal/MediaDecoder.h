@@ -1,9 +1,5 @@
-//
-// Created by gm on 2025/12/5.
-//
-
-#ifndef LVGL_DEMO_MEDIADECODER_H
-#define LVGL_DEMO_MEDIADECODER_H
+ #ifndef LVGL_APP_HAL_MEDIA_DECODER_H
+#define LVGL_APP_HAL_MEDIA_DECODER_H
 
 #include <functional>
 #include <iostream>
@@ -24,7 +20,6 @@ class MediaDecoder
     ~MediaDecoder();
 
     bool open(const char *url);
-    // 解码一帧或一段数据，通过回调返回 PCM 数据
     bool decode(std::function<void(uint8_t *, int)> callback);
     void close();
 
@@ -33,20 +28,17 @@ class MediaDecoder
     bool seek(double timestamp);
 
   private:
-    AVFormatContext *fmt_ctx = nullptr;
-    AVCodecContext *dec_ctx = nullptr;
-    int audio_stream_index = -1;
-    AVPacket *packet = nullptr;
-    AVFrame *frame = nullptr;
-    SwrContext *swr_ctx = nullptr;
+    AVFormatContext *m_fmtCtx;
+    AVCodecContext *m_decCtx;
+    int m_audioStreamIndex;
+    AVPacket *m_packet;
+    AVFrame *m_frame;
+    SwrContext *m_swrCtx;
 
-    // 重采样输出缓冲区
-    uint8_t **dst_data = nullptr;
-    int dst_linesize;
-    int max_dst_nb_samples = 0;
-
-    //当前播放时间（秒）
-    double current_time = 0.0;
+    uint8_t **m_dstData;
+    int m_dstLinesize;
+    int m_maxDstNbSamples;
+    double m_currentTime;
 };
 
-#endif // LVGL_DEMO_MEDIADECODER_H
+#endif // LVGL_APP_HAL_MEDIA_DECODER_H

@@ -1,20 +1,14 @@
-//
-// Created by gm on 2025/12/3.
-//
-
 #include "Backlight.h"
 
 #include <iostream>
-#include <ostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-
-
-Backlight::Backlight(std::string path) : brightness_path(path + "brightness"), \
-                                max_brightness_path(path + "/max_brightness")
+Backlight::Backlight(const std::string& path)
+    : m_brightnessPath(path + "brightness")
+    , m_maxBrightnessPath(path + "/max_brightness")
 {
 }
 
@@ -24,11 +18,11 @@ Backlight::~Backlight()
 
 void Backlight::setBrightness(int brightness)
 {
-    // Implementation to set the backlight brightness
-    FILE* file = fopen(brightness_path.c_str(), "w");
+    FILE* file = fopen(m_brightnessPath.c_str(), "w");
     if (!file)
     {
-        std::cerr << "Failed to open file " << brightness_path.c_str() << std::endl;
+        std::cerr << "Failed to open file " << m_brightnessPath.c_str() << std::endl;
+        return;
     }
 
     fprintf(file, "%d\n", brightness);
@@ -37,11 +31,10 @@ void Backlight::setBrightness(int brightness)
 
 int Backlight::getBrightness() const
 {
-    // Implementation to get the current backlight brightness
-    FILE* file = fopen(brightness_path.c_str(), "w");
+    FILE* file = fopen(m_brightnessPath.c_str(), "r");
     if (!file)
     {
-        std::cerr << "Failed to open file " << brightness_path.c_str()<< std::endl;
+        std::cerr << "Failed to open file " << m_brightnessPath.c_str() << std::endl;
         return -1;
     }
     int value;

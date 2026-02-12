@@ -3,8 +3,8 @@
  * 说明: 宏名称直接对应天气代码 (如 QW_ICON_100)
  */
 
-#ifndef QWEATHER_ICONS_H
-#define QWEATHER_ICONS_H
+#ifndef LVGL_APP_FONTS_QWEATHER_ICONS_H
+#define LVGL_APP_FONTS_QWEATHER_ICONS_H
 
 #define QW_ICON_100 "\xEF\x84\x81"           // Code: 100, Unicode: 0xF101
 #define QW_ICON_101 "\xEF\x84\x82"           // Code: 101, Unicode: 0xF102
@@ -514,4 +514,4 @@
 #define QW_ICON_1710 "\xEF\x8C\x93"          // Code: 1710, Unicode: 0xF313
 #define QW_ICON_2167 "\xEF\x8C\x94"          // Code: 2167, Unicode: 0xF314
 
-#endif // QWEATHER_ICONS_H
+#endif // LVGL_APP_FONTS_QWEATHER_ICONS_H

@@ -1,22 +1,20 @@
-//
-// Created by gm on 2025/12/3.
-//
+#ifndef LVGL_APP_HAL_BACKLIGHT_H
+#define LVGL_APP_HAL_BACKLIGHT_H
 
-#ifndef LVGL_DEMO_BACKLIGHT_H
-#define LVGL_DEMO_BACKLIGHT_H
-#include <pstl/algorithm_impl.h>
+#include <string>
 
 class Backlight
 {
 private:
-    std::string brightness_path;
-    std::string max_brightness_path;
+    std::string m_brightnessPath;
+    std::string m_maxBrightnessPath;
+
 public:
-    Backlight(std::string path);
+    explicit Backlight(const std::string& path);
     ~Backlight();
+
     void setBrightness(int level);
     int getBrightness() const;
 };
 
-
-#endif //LVGL_DEMO_BACKLIGHT_H
+#endif // LVGL_APP_HAL_BACKLIGHT_H

@@ -1,5 +1,5 @@
-#ifndef DHT11_HPP
-#define DHT11_HPP
+#ifndef LVGL_APP_HAL_DHT11_H
+#define LVGL_APP_HAL_DHT11_H
 
 #include <ctime>
 #include <string>
@@ -7,25 +7,22 @@
 class Dht11
 {
   private:
-    std::string devPath;
-    int fd;
-    int lastTemp;
-    int lastHumi;
-    time_t lastReadTime;
+    std::string m_devPath;
+    int m_fd;
+    int m_lastTemp;
+    int m_lastHumi;
+    time_t m_lastReadTime;
 
     void updateData();
 
   public:
-    Dht11(std::string path);
+    explicit Dht11(const std::string &path);
     ~Dht11();
 
-    bool openDevice();
-    void closeDevice();
-
-    // 读取温度
+    bool open();
+    void close();
     int readTemperature();
-    // 读取湿度
     int readHumidity();
 };
 
-#endif // DHT11_HPP
+#endif // LVGL_APP_HAL_DHT11_H
