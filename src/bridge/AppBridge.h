@@ -8,6 +8,9 @@ extern "C"
 {
 #endif
 
+    int bridge_init(void);
+    void bridge_deinit(void);
+
     void bridge_music_scan_dir(const char *path);
     char **bridge_get_music_playlist(size_t *out_count);
     void bridge_free_music_playlist(char **playlist, size_t count);

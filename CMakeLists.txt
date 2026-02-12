@@ -1,49 +1,58 @@
-#@author: Deng Zhimao
-#@email: dengzhimao@alientek.com
-#B站作品: https://space.bilibili.com/474103963?spm_id_from=333.788.0.0
-
-#开源电子网: http://www.openedv.com/forum.php
-#正点原子官网: https://www.alientek.com
-#店铺: https://zhengdianyuanzi.tmall.com
-
-#LICENCE GPLV3 
 cmake_minimum_required(VERSION 3.10)
 
+# 项目名称和语言设置
 project(lvgl_demo LANGUAGES C CXX)
 
+# C 语言标准设置：使用 C11 标准
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
+
+# C++ 语言标准设置：使用 C++17 标准
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(TOOLCHAIN_DIR /home/gm/Workspace/linux_sdk/luckfox_rk3506_sdk/buildroot/output/rockchip_rk3506_luckfox/host)
+# --- 工具链配置 ---
+# 设置交叉编译工具链目录（RK3506 平台）
+set(TOOLCHAIN_DIR $ENV{RK3506_TOOLCHAIN_DIR})
+if(NOT TOOLCHAIN_DIR)
+    set(TOOLCHAIN_DIR /home/gm/Workspace/linux_sdk/luckfox_rk3506_sdk/buildroot/output/rockchip_rk3506_luckfox/host)
+endif()
+
+# 设置编译器路径
 set(CMAKE_CXX_COMPILER ${TOOLCHAIN_DIR}/bin/arm-buildroot-linux-gnueabihf-g++)
 set(CMAKE_C_COMPILER ${TOOLCHAIN_DIR}/bin/arm-buildroot-linux-gnueabihf-gcc)
-set(SYSROOT /home/gm/Workspace/linux_sdk/luckfox_rk3506_sdk/buildroot/output/rockchip_rk3506_luckfox/host/arm-buildroot-linux-gnueabihf/sysroot/usr/include)
-set(CMAKE_SYSROOT /home/gm/Workspace/linux_sdk/luckfox_rk3506_sdk/buildroot/output/rockchip_rk3506_luckfox/host/arm-buildroot-linux-gnueabihf/sysroot)
 
+# 设置系统根目录
+set(CMAKE_SYSROOT ${TOOLCHAIN_DIR}/arm-buildroot-linux-gnueabihf/sysroot)
 
+# --- 头文件搜索路径 ---
 include_directories(
-        ${CMAKE_SYSROOT}/usr/include/lvgl
-        ${CMAKE_SYSROOT}/usr/include/lvgl/lv_drivers
-        ${CMAKE_SYSROOT}/usr/include/c++/12.4.0
-        )
+    ${CMAKE_SYSROOT}/usr/include/lvgl
+    ${CMAKE_SYSROOT}/usr/include/lvgl/lv_drivers
+    ${CMAKE_SYSROOT}/usr/include/c++/12.4.0
+    ${PROJECT_SOURCE_DIR}
+    ${PROJECT_SOURCE_DIR}/src
+    ${PROJECT_SOURCE_DIR}/src/hal
+    ${PROJECT_SOURCE_DIR}/src/service
+    ${PROJECT_SOURCE_DIR}/src/bridge
+    ${PROJECT_SOURCE_DIR}/src/fonts
+    ${PROJECT_SOURCE_DIR}/lvgl8
+    ${PROJECT_SOURCE_DIR}/common
+    ${PROJECT_SOURCE_DIR}/sys
+    ${PROJECT_SOURCE_DIR}/ui/custom
+    ${PROJECT_SOURCE_DIR}/ui/generated
+    ${PROJECT_SOURCE_DIR}/ui/generated/guider_customer_fonts
+)
 
+# --- 宏定义 ---
 add_definitions(-DUSE_RK3506=1)
 add_definitions(-DUSE_DRM=1 -DUSE_EVDEV=1 -DUSE_RGA=1)
 
-include_directories(${PROJECT_SOURCE_DIR})
-include_directories(${PROJECT_SOURCE_DIR}/src/hal)
-include_directories(${PROJECT_SOURCE_DIR}/src/service)
-include_directories(${PROJECT_SOURCE_DIR}/src/bridge)
-include_directories(${PROJECT_SOURCE_DIR}/src/fonts)
-include_directories(${PROJECT_SOURCE_DIR}/lvgl8)
-include_directories(${PROJECT_SOURCE_DIR}/common)
-include_directories(${PROJECT_SOURCE_DIR}/sys)
-include_directories(${PROJECT_SOURCE_DIR}/ui/custom)
-include_directories(${PROJECT_SOURCE_DIR}/ui/generated)
-include_directories(${PROJECT_SOURCE_DIR}/ui/generated/guider_customer_fonts)
+# --- 编译器标志 ---
+# 禁用 GCC 7.1 ABI 变更警告（psabi）
+add_compile_options(-Wno-psabi)
 
+# --- 收集所有源文件 ---
 aux_source_directory(${PROJECT_SOURCE_DIR}/lvgl8 SRCS)
 aux_source_directory(${PROJECT_SOURCE_DIR}/sys SRCS)
 aux_source_directory(${PROJECT_SOURCE_DIR}/common SRCS)
@@ -51,24 +60,35 @@ aux_source_directory(${PROJECT_SOURCE_DIR}/ui/custom SRCS)
 aux_source_directory(${PROJECT_SOURCE_DIR}/ui/generated SRCS)
 aux_source_directory(${PROJECT_SOURCE_DIR}/ui/generated/guider_fonts SRCS)
 aux_source_directory(${PROJECT_SOURCE_DIR}/ui/generated/images SRCS)
-aux_source_directory(${PROJECT_SOURCE_DIR} SRCS)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/hal SRCS)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/service SRCS)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/bridge SRCS)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/fonts SRCS)
 
-add_executable(${PROJECT_NAME} ${SRCS}
-        src/hal/Backlight.h
-        src/hal/Backlight.cpp
-        src/hal/MediaDecoder.cpp
-        src/hal/MediaDecoder.h)
+# 只添加主程序文件
+list(APPEND SRCS ${PROJECT_SOURCE_DIR}/main.cpp)
 
+# --- 创建可执行文件 ---
+add_executable(${PROJECT_NAME} ${SRCS})
+
+# --- 链接外部库 ---
+# LVGL 图形库及其驱动
+# freetype: 字体渲染库
+# drm: Direct Rendering Manager（显示管理）
+# evdev: Linux 输入事件设备
+# rga: Rockchip 硬件加速
+# pthread: 多线程支持
+# asound: ALSA 音频库
+# avformat/avcodec/swscale/swresample: FFmpeg 音视频编解码
+# curl: HTTP 客户端库
+# paho-mqttpp3/paho-mqtt3c: MQTT 客户端库
 target_link_libraries(${PROJECT_NAME}
-        lvgl lv_drivers freetype drm evdev rga pthread asound
-        avformat avcodec avutil swscale swresample m
-        curl paho-mqttpp3 paho-mqtt3c
+    lvgl lv_drivers freetype drm evdev rga pthread asound
+    avformat avcodec avutil swscale swresample m
+    curl paho-mqttpp3 paho-mqtt3c
 )
 
+# --- 自定义清理目标 ---
 add_custom_target(distclean
     COMMAND ${CMAKE_COMMAND} -E remove CMakeCache.txt
     COMMAND ${CMAKE_COMMAND} -E remove Makefile
@@ -78,13 +98,13 @@ add_custom_target(distclean
     COMMENT "Clean all CMake generated files and ${PROJECT_NAME}"
 )
 
-# --- Install Configuration ---
+# --- 安装配置 ---
+set(OVERLAY_ROOT_DIR $ENV{RK3506_OVERLAY_DIR})
+if(NOT OVERLAY_ROOT_DIR)
+    set(OVERLAY_ROOT_DIR "/home/gm/Workspace/linux_sdk/luckfox_rk3506_sdk/overlay/root")
+endif()
 
-# Define the overlay paths
-set(OVERLAY_ROOT_DIR "/home/gm/Workspace/linux_sdk/luckfox_rk3506_sdk/overlay/root")
-
-# Install the executable to /root/
-install(TARGETS ${PROJECT_NAME} 
-        DESTINATION ${OVERLAY_ROOT_DIR}
-        PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ)
-
+install(TARGETS ${PROJECT_NAME}
+    DESTINATION ${OVERLAY_ROOT_DIR}
+    PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ
+)

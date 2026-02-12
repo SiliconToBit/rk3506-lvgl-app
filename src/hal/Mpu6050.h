@@ -5,44 +5,29 @@
 
 class Mpu6050
 {
-  public:
+public:
     Mpu6050();
     ~Mpu6050();
 
-    bool init();   // 打开设备并初始化卡尔曼参数
-    bool update(); // 读取一次数据并更新解算结果，返回 true 表示更新成功
+    bool init();
+    bool update();
 
-    float getRoll() const
-    {
-        return m_roll;
-    }
-    float getPitch() const
-    {
-        return m_pitch;
-    }
-    float getYaw() const
-    {
-        return m_yaw;
-    }
-    float getTemperature() const
-    {
-        return m_temperature;
-    }
+    float getRoll() const { return m_roll; }
+    float getPitch() const { return m_pitch; }
+    float getYaw() const { return m_yaw; }
+    float getTemperature() const { return m_temperature; }
 
-  private:
-    /* --- 卡尔曼滤波器结构体 --- */
+private:
     struct KalmanFilter
     {
-        float Q_angle;   // 过程噪声协方差 (角度)
-        float Q_bias;    // 过程噪声协方差 (偏差)
-        float R_measure; // 测量噪声协方差
-
-        float angle;   // 输出角度
-        float bias;    // 输出陀螺仪偏差
-        float P[2][2]; // 误差协方差矩阵
+        float Q_angle;
+        float Q_bias;
+        float R_measure;
+        float angle;
+        float bias;
+        float P[2][2];
     };
 
-    /* 必须与驱动层保持一致 */
     struct RawData
     {
         uint8_t accel_x_h;
@@ -63,21 +48,17 @@ class Mpu6050
 
     int m_fd;
     double m_lastTime;
-
     KalmanFilter m_kalmanX;
     KalmanFilter m_kalmanY;
-
     float m_roll;
     float m_pitch;
     float m_yaw;
     float m_temperature;
-
     float m_gyroBiasX;
     float m_gyroBiasY;
     float m_gyroBiasZ;
 
     void calibrate();
-
     void kalmanInit(KalmanFilter* k);
     float kalmanGetAngle(KalmanFilter* k, float newAngle, float newRate, float dt);
     double getTimeSec();

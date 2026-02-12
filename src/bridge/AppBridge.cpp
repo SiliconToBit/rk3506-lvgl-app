@@ -1,4 +1,5 @@
 #include "AppBridge.h"
+#include "AppConfig.h"
 #include "Backlight.h"
 #include "Dht11.h"
 #include "MusicPlayer.h"
@@ -9,44 +10,93 @@
 #include <string>
 #include <vector>
 
-static MusicPlayer s_player;
-static Dht11 s_dht11("/dev/dht11");
-static Backlight s_backlight("/sys/class/backlight/backlight/xxxx");
-static WeatherService s_weatherService("4661897787bc49c793207316caf28304");
+static MusicPlayer *s_player = nullptr;
+static Dht11 *s_dht11 = nullptr;
+static Backlight *s_backlight = nullptr;
+static WeatherService *s_weatherService = nullptr;
 
-static char* s_musicDir = "/root/Music";
-
-void bridge_music_scan_dir(const char* path)
+int bridge_init(void)
 {
-    std::cout << "[Bridge] Scan music directory: " << path << std::endl;
-    s_player.scanDirectory(path);
-
-    if (!s_player.getPlaylist().empty())
+    s_player = new (std::nothrow) MusicPlayer();
+    if (!s_player)
     {
-        s_player.loadMusic(0);
+        std::cerr << "[Bridge] Failed to create MusicPlayer" << std::endl;
+        return -1;
+    }
+
+    s_dht11 = new (std::nothrow) Dht11(APP_DEV_DHT11);
+    if (!s_dht11 || !s_dht11->open())
+    {
+        std::cerr << "[Bridge] Failed to init DHT11" << std::endl;
+    }
+
+    s_backlight = new (std::nothrow) Backlight(APP_DEV_BACKLIGHT);
+    if (!s_backlight)
+    {
+        std::cerr << "[Bridge] Failed to create Backlight" << std::endl;
+    }
+
+    s_weatherService = new (std::nothrow) WeatherService(APP_WEATHER_API_KEY);
+    if (!s_weatherService)
+    {
+        std::cerr << "[Bridge] Failed to create WeatherService" << std::endl;
+        return -1;
+    }
+
+    std::cout << "[Bridge] Initialized successfully" << std::endl;
+    return 0;
+}
+
+void bridge_deinit(void)
+{
+    delete s_weatherService;
+    s_weatherService = nullptr;
+
+    delete s_backlight;
+    s_backlight = nullptr;
+
+    delete s_dht11;
+    s_dht11 = nullptr;
+
+    delete s_player;
+    s_player = nullptr;
+
+    std::cout << "[Bridge] Deinitialized" << std::endl;
+}
+
+void bridge_music_scan_dir(const char *path)
+{
+    if (!s_player)
+        return;
+    std::cout << "[Bridge] Scan music directory: " << path << std::endl;
+    s_player->scanDirectory(path);
+
+    if (!s_player->getPlaylist().empty())
+    {
+        s_player->loadMusic(0);
     }
 }
 
-char** bridge_get_music_playlist(size_t* out_count)
+char **bridge_get_music_playlist(size_t *out_count)
 {
-    bridge_music_scan_dir(s_musicDir);
+    bridge_music_scan_dir(APP_MUSIC_DIR);
 
-    std::vector<std::string> playlist = s_player.getPlaylist();
+    std::vector<std::string> playlist = s_player->getPlaylist();
     *out_count = playlist.size();
 
     if (playlist.empty())
         return nullptr;
 
-    char** c_array = (char**)std::malloc(playlist.size() * sizeof(char*));
+    char **c_array = (char **)std::malloc(playlist.size() * sizeof(char *));
     for (size_t i = 0; i < playlist.size(); ++i)
     {
-        c_array[i] = (char*)std::malloc(playlist[i].size() + 1);
+        c_array[i] = (char *)std::malloc(playlist[i].size() + 1);
         std::strcpy(c_array[i], playlist[i].c_str());
     }
     return c_array;
 }
 
-void bridge_free_music_playlist(char** playlist, size_t count)
+void bridge_free_music_playlist(char **playlist, size_t count)
 {
     if (playlist == nullptr)
         return;
@@ -60,99 +110,127 @@ void bridge_free_music_playlist(char** playlist, size_t count)
 
 void bridge_music_play(void)
 {
+    if (!s_player)
+        return;
     std::cout << "[Bridge] Play music" << std::endl;
-    s_player.play();
+    s_player->play();
 }
 
 void bridge_music_pause(void)
 {
+    if (!s_player)
+        return;
     std::cout << "[Bridge] Pause music" << std::endl;
-    s_player.pause();
+    s_player->pause();
 }
 
 void bridge_music_prev(void)
 {
+    if (!s_player)
+        return;
     std::cout << "[Bridge] Prev music" << std::endl;
-    s_player.prev();
+    s_player->prev();
 }
 
 void bridge_music_next(void)
 {
+    if (!s_player)
+        return;
     std::cout << "[Bridge] Next music" << std::endl;
-    s_player.next();
+    s_player->next();
 }
 
 double bridge_music_current_time(void)
 {
-    return s_player.getMusicCurrentTime();
+    if (!s_player)
+        return 0.0;
+    return s_player->getMusicCurrentTime();
 }
 
 double bridge_music_duration(void)
 {
-    return s_player.getMusicDuration();
+    if (!s_player)
+        return 0.0;
+    return s_player->getMusicDuration();
 }
 
-char* bridge_current_music_name(void)
+char *bridge_current_music_name(void)
 {
-    std::string music_name = s_player.getCurrentSongName();
-    char* c_str = (char*)std::malloc(music_name.size() + 1);
+    if (!s_player)
+        return nullptr;
+    std::string music_name = s_player->getCurrentSongName();
+    char *c_str = (char *)std::malloc(music_name.size() + 1);
     std::strcpy(c_str, music_name.c_str());
     return c_str;
 }
 
-char* bridge_current_song_lyrics(void)
+char *bridge_current_song_lyrics(void)
 {
-    std::string lyrics = s_player.getCurrentSongLyrics();
-    char* c_str = (char*)std::malloc(lyrics.size() + 1);
+    if (!s_player)
+        return nullptr;
+    std::string lyrics = s_player->getCurrentSongLyrics();
+    char *c_str = (char *)std::malloc(lyrics.size() + 1);
     std::strcpy(c_str, lyrics.c_str());
     return c_str;
 }
 
-char* bridge_get_current_lyric_line(void)
+char *bridge_get_current_lyric_line(void)
 {
-    double time = s_player.getMusicCurrentTime();
-    std::string line = s_player.getCurrentLyricLine(time);
-    char* c_str = (char*)std::malloc(line.size() + 1);
+    if (!s_player)
+        return nullptr;
+    double time = s_player->getMusicCurrentTime();
+    std::string line = s_player->getCurrentLyricLine(time);
+    char *c_str = (char *)std::malloc(line.size() + 1);
     std::strcpy(c_str, line.c_str());
     return c_str;
 }
 
-char* bridge_get_current_album_cover_path(void)
+char *bridge_get_current_album_cover_path(void)
 {
-    std::string path = s_player.getCurrentAlbumCoverPath();
+    if (!s_player)
+        return nullptr;
+    std::string path = s_player->getCurrentAlbumCoverPath();
     if (path.empty())
         return nullptr;
-    char* c_str = (char*)std::malloc(path.size() + 1);
+    char *c_str = (char *)std::malloc(path.size() + 1);
     std::strcpy(c_str, path.c_str());
     return c_str;
 }
 
 void bridge_set_volume(long volume)
 {
-    s_player.setVolume(volume);
+    if (!s_player)
+        return;
+    s_player->setVolume(volume);
 }
 
 void bridge_update_weather(void)
 {
-    std::cout << "[Bridge] Update weather (Default: 广州)" << std::endl;
-    s_weatherService.updateWeatherAsync("广州");
+    if (!s_weatherService)
+        return;
+    std::cout << "[Bridge] Update weather (Default: " APP_DEFAULT_CITY ")" << std::endl;
+    s_weatherService->updateWeatherAsync(APP_DEFAULT_CITY);
 }
 
-void bridge_update_weather_city(const char* city)
+void bridge_update_weather_city(const char *city)
 {
+    if (!s_weatherService)
+        return;
     if (city && strlen(city) > 0)
     {
         std::cout << "[Bridge] Update weather for city: " << city << std::endl;
-        s_weatherService.updateWeatherAsync(city);
+        s_weatherService->updateWeatherAsync(city);
     }
 }
 
-void bridge_get_weather_data(AppWeatherData* data)
+void bridge_get_weather_data(AppWeatherData *data)
 {
     if (!data)
         return;
+    if (!s_weatherService)
+        return;
 
-    WeatherData cppData = s_weatherService.getWeatherData();
+    WeatherData cppData = s_weatherService->getWeatherData();
 
     strncpy(data->city, cppData.city, sizeof(data->city) - 1);
     data->city[sizeof(data->city) - 1] = '\0';
@@ -193,17 +271,21 @@ void bridge_get_weather_data(AppWeatherData* data)
 
 int bridge_get_temp(void)
 {
-    s_dht11.open();
-    return s_dht11.readTemperature();
+    if (!s_dht11)
+        return 0;
+    return s_dht11->readTemperature();
 }
 
 int bridge_get_humi(void)
 {
-    s_dht11.open();
-    return s_dht11.readHumidity();
+    if (!s_dht11)
+        return 0;
+    return s_dht11->readHumidity();
 }
 
 void bridge_set_brightness(int level)
 {
-    s_backlight.setBrightness(level);
+    if (!s_backlight)
+        return;
+    s_backlight->setBrightness(level);
 }

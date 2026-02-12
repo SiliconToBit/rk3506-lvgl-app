@@ -1,4 +1,5 @@
 #include "Mpu6050.h"
+#include "AppConfig.h"
 #include <fcntl.h>
 #include <math.h>
 #include <stdio.h>
@@ -26,7 +27,7 @@ Mpu6050::~Mpu6050()
 
 bool Mpu6050::init()
 {
-    m_fd = open("/dev/mpu6050", O_RDONLY);
+    m_fd = open(APP_DEV_MPU6050, O_RDONLY);
     if (m_fd < 0)
     {
         perror("Mpu6050 Open failed");

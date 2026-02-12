@@ -12,14 +12,13 @@
  *********************/
 #include "custom.h"
 #include "AppBridge.h"
+#include "FontManager.h" // 引入 FontManager.h 以使用 font_style_32
 #include "fonts.h"
 #include "lvgl.h"
-#include "main.h" // 引入 main.h 以使用 font_style_32
 #include "qweather_icons.h"
 #include <stdio.h>
 #include <stdlib.h> // for free
 #include <time.h>
-
 
 /*********************
  *      DEFINES
@@ -164,7 +163,7 @@ void music_update_timer_cb(lv_timer_t *timer)
 void start_music_timer(lv_ui *ui)
 {
     // 应用字体样式 (HP Font, Size 32)
-    // 注意：font_style_32 在 main.cpp 中定义并在 main.h 中声明
+    // 注意：font_style_32 由 FontManager 管理
     if (ui->music_screen_song_name_label)
     {
         // 移除 GUI Guider 生成的本地字体样式，以便 font_style_32 生效
@@ -523,7 +522,6 @@ void sensor_update_timer_cb(lv_timer_t *timer)
     int temperature = bridge_get_temp();
     int humidity = bridge_get_humi();
 
-
     // 更新 UI 显示
     if (ui->sensor_screen_label_8)
     {
@@ -556,4 +554,3 @@ void stop_sensor_timer()
         sensor_timer = NULL;
     }
 }
-
