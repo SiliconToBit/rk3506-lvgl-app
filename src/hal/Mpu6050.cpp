@@ -19,15 +19,12 @@ Mpu6050::Mpu6050()
 
 Mpu6050::~Mpu6050()
 {
-    if (m_fd >= 0)
-    {
-        close(m_fd);
-    }
+    close();
 }
 
-bool Mpu6050::init()
+bool Mpu6050::open()
 {
-    m_fd = open(APP_DEV_MPU6050, O_RDONLY);
+    m_fd = ::open(APP_DEV_MPU6050, O_RDONLY);
     if (m_fd < 0)
     {
         perror("Mpu6050 Open failed");
@@ -36,6 +33,15 @@ bool Mpu6050::init()
     calibrate();
     m_lastTime = getTimeSec();
     return true;
+}
+
+void Mpu6050::close()
+{
+    if (m_fd >= 0)
+    {
+        ::close(m_fd);
+        m_fd = -1;
+    }
 }
 
 void Mpu6050::calibrate()

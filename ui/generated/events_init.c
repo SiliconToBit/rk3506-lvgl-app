@@ -703,4 +703,5 @@ void events_init_camera_screen(lv_ui *ui)
 
 void events_init(lv_ui *ui)
 {
+    
 }

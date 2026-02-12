@@ -5,19 +5,32 @@
 
 class Mpu6050
 {
-public:
+  public:
     Mpu6050();
     ~Mpu6050();
 
-    bool init();
+    bool open();
+    void close();
     bool update();
 
-    float getRoll() const { return m_roll; }
-    float getPitch() const { return m_pitch; }
-    float getYaw() const { return m_yaw; }
-    float getTemperature() const { return m_temperature; }
+    float getRoll() const
+    {
+        return m_roll;
+    }
+    float getPitch() const
+    {
+        return m_pitch;
+    }
+    float getYaw() const
+    {
+        return m_yaw;
+    }
+    float getTemperature() const
+    {
+        return m_temperature;
+    }
 
-private:
+  private:
     struct KalmanFilter
     {
         float Q_angle;
@@ -59,8 +72,8 @@ private:
     float m_gyroBiasZ;
 
     void calibrate();
-    void kalmanInit(KalmanFilter* k);
-    float kalmanGetAngle(KalmanFilter* k, float newAngle, float newRate, float dt);
+    void kalmanInit(KalmanFilter *k);
+    float kalmanGetAngle(KalmanFilter *k, float newAngle, float newRate, float dt);
     double getTimeSec();
 };
 
