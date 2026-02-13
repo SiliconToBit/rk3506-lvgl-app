@@ -1,6 +1,7 @@
 #include "AppBridge.h"
 #include "AppConfig.h"
 #include "Backlight.h"
+#include "DeviceService.h"
 #include "Dht11.h"
 #include "MusicPlayer.h"
 #include "WeatherService.h"
@@ -288,4 +289,155 @@ void bridge_set_brightness(int level)
     if (!s_backlight)
         return;
     s_backlight->setBrightness(level);
+}
+
+int bridge_device_init(void)
+{
+    return DeviceService::instance().init() ? 0 : -1;
+}
+
+void bridge_device_deinit(void)
+{
+    DeviceService::instance().deinit();
+}
+
+int bridge_led_add(const char *deviceId, const char *gpioPath)
+{
+    if (!deviceId || !gpioPath)
+        return -1;
+
+    return DeviceService::instance().addLed(deviceId, gpioPath) ? 0 : -1;
+}
+
+int bridge_led_remove(const char *deviceId)
+{
+    if (!deviceId)
+        return -1;
+
+    return DeviceService::instance().removeDevice(deviceId) ? 0 : -1;
+}
+
+int bridge_led_set_on(const char *deviceId)
+{
+    if (!deviceId)
+        return -1;
+
+    return DeviceService::instance().setDeviceOn(deviceId) ? 0 : -1;
+}
+
+int bridge_led_set_off(const char *deviceId)
+{
+    if (!deviceId)
+        return -1;
+
+    return DeviceService::instance().setDeviceOff(deviceId) ? 0 : -1;
+}
+
+int bridge_led_toggle(const char *deviceId)
+{
+    if (!deviceId)
+        return -1;
+
+    return DeviceService::instance().toggleDevice(deviceId) ? 0 : -1;
+}
+
+int bridge_led_get_state(const char *deviceId)
+{
+    if (!deviceId)
+        return 0;
+
+    return DeviceService::instance().getDeviceState(deviceId) ? 1 : 0;
+}
+
+int bridge_buzzer_add(const char *deviceId, const char *gpioPath)
+{
+    if (!deviceId || !gpioPath)
+        return -1;
+
+    return DeviceService::instance().addBuzzer(deviceId, gpioPath) ? 0 : -1;
+}
+
+int bridge_buzzer_on(const char *deviceId)
+{
+    if (!deviceId)
+        return -1;
+
+    return DeviceService::instance().buzzerOn(deviceId) ? 0 : -1;
+}
+
+int bridge_buzzer_off(const char *deviceId)
+{
+    if (!deviceId)
+        return -1;
+
+    return DeviceService::instance().buzzerOff(deviceId) ? 0 : -1;
+}
+
+int bridge_buzzer_beep(const char *deviceId, int durationMs)
+{
+    if (!deviceId)
+        return -1;
+
+    return DeviceService::instance().buzzerBeep(deviceId, durationMs) ? 0 : -1;
+}
+
+int bridge_buzzer_beep_pattern(const char *deviceId, int onMs, int offMs, int count)
+{
+    if (!deviceId)
+        return -1;
+
+    return DeviceService::instance().buzzerBeepPattern(deviceId, onMs, offMs, count) ? 0 : -1;
+}
+
+int bridge_dht11_add(const char *deviceId, const char *devPath)
+{
+    if (!deviceId || !devPath)
+        return -1;
+
+    return DeviceService::instance().addDht11(deviceId, devPath) ? 0 : -1;
+}
+
+int bridge_dht11_get_temp(const char *deviceId)
+{
+    if (!deviceId)
+        return 0;
+
+    return DeviceService::instance().getTemperature(deviceId);
+}
+
+int bridge_dht11_get_humi(const char *deviceId)
+{
+    if (!deviceId)
+        return 0;
+
+    return DeviceService::instance().getHumidity(deviceId);
+}
+
+void bridge_sensor_report_enable(int enable, int intervalSec)
+{
+    DeviceService::instance().enableSensorReport(enable != 0, intervalSec);
+}
+
+void bridge_sensor_report_once(void)
+{
+    DeviceService::instance().reportSensorData();
+}
+
+int bridge_mqtt_connect(const char *host, int port, const char *clientId)
+{
+    if (!host)
+        return -1;
+
+    std::string id = clientId ? clientId : "lvgl_device";
+    return DeviceService::instance().connectMqtt(host, port, id) ? 0 : -1;
+}
+
+void bridge_mqtt_disconnect(void)
+{
+    DeviceService::instance().disconnectMqtt();
+}
+
+int bridge_mqtt_is_connected(void)
+{
+    return DeviceService::instance().isMqttConnected() ? 1 : 0;
 }

@@ -1,3 +1,9 @@
+/**
+ * @file AudioDevice.h
+ * @brief 音频设备管理类
+ * @details 负责音频设备的打开、关闭、写入和音量控制
+ */
+
 #ifndef LVGL_APP_HAL_AUDIO_DEVICE_H
 #define LVGL_APP_HAL_AUDIO_DEVICE_H
 

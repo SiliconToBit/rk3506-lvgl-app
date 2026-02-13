@@ -1,3 +1,9 @@
+/**
+ * @file Mpu6050.h
+ * @brief MPU6050 传感器管理类
+ * @details 负责 MPU6050 传感器的数据读取和处理
+ */
+
 #ifndef LVGL_APP_HAL_MPU6050_H
 #define LVGL_APP_HAL_MPU6050_H
 

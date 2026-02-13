@@ -1,3 +1,9 @@
+/**
+ * @file MusicPlayer.h
+ * @brief 音乐播放器管理类
+ * @details 负责音乐的播放、暂停、停止、切换和音量控制
+ */
+
 #ifndef LVGL_APP_SERVICE_MUSIC_PLAYER_H
 #define LVGL_APP_SERVICE_MUSIC_PLAYER_H
 

@@ -65,8 +65,41 @@ extern "C"
     void bridge_set_brightness(int level);
     int bridge_get_brightness(void);
 
+    // 设备控制接口
+    int bridge_device_init(void);
+    void bridge_device_deinit(void);
+
+    // LED 控制
+    int bridge_led_add(const char *deviceId, const char *gpioPath);
+    int bridge_led_remove(const char *deviceId);
+    int bridge_led_set_on(const char *deviceId);
+    int bridge_led_set_off(const char *deviceId);
+    int bridge_led_toggle(const char *deviceId);
+    int bridge_led_get_state(const char *deviceId);
+
+    // 蜂鸣器控制
+    int bridge_buzzer_add(const char *deviceId, const char *gpioPath);
+    int bridge_buzzer_on(const char *deviceId);
+    int bridge_buzzer_off(const char *deviceId);
+    int bridge_buzzer_beep(const char *deviceId, int durationMs);
+    int bridge_buzzer_beep_pattern(const char *deviceId, int onMs, int offMs, int count);
+
+    // 温湿度传感器
+    int bridge_dht11_add(const char *deviceId, const char *devPath);
+    int bridge_dht11_get_temp(const char *deviceId);
+    int bridge_dht11_get_humi(const char *deviceId);
+
+    // 温湿度上报
+    void bridge_sensor_report_enable(int enable, int intervalSec);
+    void bridge_sensor_report_once(void);
+
+    // MQTT 连接
+    int bridge_mqtt_connect(const char *host, int port, const char *clientId);
+    void bridge_mqtt_disconnect(void);
+    int bridge_mqtt_is_connected(void);
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif // LVGL_APP_BRIDGE_APP_BRIDGE_H
+#endif

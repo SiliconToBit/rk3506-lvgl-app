@@ -1,3 +1,9 @@
+/**
+ * @file fonts.h
+ * @brief 天气代码对应图标字符串宏
+ * @details 根据天气代码返回对应的图标字符串宏
+ */
+
 #ifndef LVGL_APP_FONTS_FONTS_H
 #define LVGL_APP_FONTS_FONTS_H
 

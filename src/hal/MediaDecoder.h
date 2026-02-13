@@ -1,4 +1,10 @@
- #ifndef LVGL_APP_HAL_MEDIA_DECODER_H
+/**
+ * @file MediaDecoder.h
+ * @brief 媒体解码器管理类
+ * @details 负责音视频媒体的解码和处理
+ */
+
+#ifndef LVGL_APP_HAL_MEDIA_DECODER_H
 #define LVGL_APP_HAL_MEDIA_DECODER_H
 
 #include <functional>

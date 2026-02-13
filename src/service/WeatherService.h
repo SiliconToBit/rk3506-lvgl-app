@@ -1,3 +1,9 @@
+/**
+ * @file WeatherService.h
+ * @brief 天气服务管理类
+ * @details 负责获取和解析天气数据
+ */
+
 #ifndef LVGL_APP_SERVICE_WEATHER_SERVICE_H
 #define LVGL_APP_SERVICE_WEATHER_SERVICE_H
 
