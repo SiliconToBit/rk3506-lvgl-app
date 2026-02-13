@@ -16,6 +16,11 @@ static Dht11 *s_dht11 = nullptr;
 static Backlight *s_backlight = nullptr;
 static WeatherService *s_weatherService = nullptr;
 
+/**
+ * @brief 初始化桥接层
+ * @return 0 成功, -1 失败
+ * @details 创建音乐播放器、DHT11传感器、背光控制器和天气服务实例
+ */
 int bridge_init(void)
 {
     s_player = new (std::nothrow) MusicPlayer();
@@ -48,6 +53,10 @@ int bridge_init(void)
     return 0;
 }
 
+/**
+ * @brief 反初始化桥接层
+ * @details 释放所有创建的实例,置空指针
+ */
 void bridge_deinit(void)
 {
     delete s_weatherService;
@@ -65,6 +74,11 @@ void bridge_deinit(void)
     std::cout << "[Bridge] Deinitialized" << std::endl;
 }
 
+/**
+ * @brief 扫描音乐目录
+ * @param path 音乐目录路径
+ * @details 扫描指定目录下的音乐文件并加载第一首
+ */
 void bridge_music_scan_dir(const char *path)
 {
     if (!s_player)
@@ -78,6 +92,12 @@ void bridge_music_scan_dir(const char *path)
     }
 }
 
+/**
+ * @brief 获取音乐播放列表
+ * @param out_count 输出参数,返回歌曲数量
+ * @return char** 歌曲名称数组,需要调用bridge_free_music_playlist释放
+ * @details 扫描默认音乐目录并返回播放列表
+ */
 char **bridge_get_music_playlist(size_t *out_count)
 {
     bridge_music_scan_dir(APP_MUSIC_DIR);
@@ -97,6 +117,11 @@ char **bridge_get_music_playlist(size_t *out_count)
     return c_array;
 }
 
+/**
+ * @brief 释放音乐播放列表内存
+ * @param playlist 播放列表数组
+ * @param count 歌曲数量
+ */
 void bridge_free_music_playlist(char **playlist, size_t count)
 {
     if (playlist == nullptr)
@@ -109,6 +134,9 @@ void bridge_free_music_playlist(char **playlist, size_t count)
     std::free(playlist);
 }
 
+/**
+ * @brief 播放音乐
+ */
 void bridge_music_play(void)
 {
     if (!s_player)
@@ -117,6 +145,9 @@ void bridge_music_play(void)
     s_player->play();
 }
 
+/**
+ * @brief 暂停音乐
+ */
 void bridge_music_pause(void)
 {
     if (!s_player)
@@ -125,6 +156,9 @@ void bridge_music_pause(void)
     s_player->pause();
 }
 
+/**
+ * @brief 上一首音乐
+ */
 void bridge_music_prev(void)
 {
     if (!s_player)
@@ -133,6 +167,9 @@ void bridge_music_prev(void)
     s_player->prev();
 }
 
+/**
+ * @brief 下一首音乐
+ */
 void bridge_music_next(void)
 {
     if (!s_player)
@@ -141,6 +178,10 @@ void bridge_music_next(void)
     s_player->next();
 }
 
+/**
+ * @brief 获取当前播放时间
+ * @return double 当前播放时间(秒)
+ */
 double bridge_music_current_time(void)
 {
     if (!s_player)
@@ -148,6 +189,10 @@ double bridge_music_current_time(void)
     return s_player->getMusicCurrentTime();
 }
 
+/**
+ * @brief 获取音乐总时长
+ * @return double 音乐总时长(秒)
+ */
 double bridge_music_duration(void)
 {
     if (!s_player)
@@ -155,6 +200,10 @@ double bridge_music_duration(void)
     return s_player->getMusicDuration();
 }
 
+/**
+ * @brief 获取当前歌曲名称
+ * @return char* 歌曲名称字符串,需要调用者free释放
+ */
 char *bridge_current_music_name(void)
 {
     if (!s_player)
@@ -165,6 +214,10 @@ char *bridge_current_music_name(void)
     return c_str;
 }
 
+/**
+ * @brief 获取当前歌曲歌词
+ * @return char* 歌词字符串,需要调用者free释放
+ */
 char *bridge_current_song_lyrics(void)
 {
     if (!s_player)
@@ -175,6 +228,10 @@ char *bridge_current_song_lyrics(void)
     return c_str;
 }
 
+/**
+ * @brief 获取当前时间对应的歌词行
+ * @return char* 当前歌词行字符串,需要调用者free释放
+ */
 char *bridge_get_current_lyric_line(void)
 {
     if (!s_player)
@@ -186,6 +243,10 @@ char *bridge_get_current_lyric_line(void)
     return c_str;
 }
 
+/**
+ * @brief 获取当前歌曲专辑封面路径
+ * @return char* 封面图片路径,需要调用者free释放;无封面返回nullptr
+ */
 char *bridge_get_current_album_cover_path(void)
 {
     if (!s_player)
@@ -198,6 +259,10 @@ char *bridge_get_current_album_cover_path(void)
     return c_str;
 }
 
+/**
+ * @brief 设置音量
+ * @param volume 音量值(0-100)
+ */
 void bridge_set_volume(long volume)
 {
     if (!s_player)
@@ -205,6 +270,10 @@ void bridge_set_volume(long volume)
     s_player->setVolume(volume);
 }
 
+/**
+ * @brief 更新天气数据(默认城市)
+ * @details 异步获取默认城市的天气数据
+ */
 void bridge_update_weather(void)
 {
     if (!s_weatherService)
@@ -213,6 +282,11 @@ void bridge_update_weather(void)
     s_weatherService->updateWeatherAsync(APP_DEFAULT_CITY);
 }
 
+/**
+ * @brief 更新指定城市的天气数据
+ * @param city 城市名称
+ * @details 异步获取指定城市的天气数据
+ */
 void bridge_update_weather_city(const char *city)
 {
     if (!s_weatherService)
@@ -224,6 +298,11 @@ void bridge_update_weather_city(const char *city)
     }
 }
 
+/**
+ * @brief 获取天气数据
+ * @param data 输出参数,存储天气数据结构
+ * @details 将C++ WeatherData转换为C语言AppWeatherData结构
+ */
 void bridge_get_weather_data(AppWeatherData *data)
 {
     if (!data)
@@ -270,6 +349,11 @@ void bridge_get_weather_data(AppWeatherData *data)
     data->day3_windDir[sizeof(data->day3_windDir) - 1] = '\0';
 }
 
+/**
+ * @brief 读取温度(兼容接口)
+ * @return int 温度值(摄氏度)
+ * @details 使用全局DHT11实例读取温度
+ */
 int bridge_get_temp(void)
 {
     if (!s_dht11)
@@ -277,6 +361,11 @@ int bridge_get_temp(void)
     return s_dht11->readTemperature();
 }
 
+/**
+ * @brief 读取湿度(兼容接口)
+ * @return int 湿度值(%)
+ * @details 使用全局DHT11实例读取湿度
+ */
 int bridge_get_humi(void)
 {
     if (!s_dht11)
@@ -284,6 +373,10 @@ int bridge_get_humi(void)
     return s_dht11->readHumidity();
 }
 
+/**
+ * @brief 设置屏幕亮度
+ * @param level 亮度等级(0-100)
+ */
 void bridge_set_brightness(int level)
 {
     if (!s_backlight)
@@ -291,16 +384,30 @@ void bridge_set_brightness(int level)
     s_backlight->setBrightness(level);
 }
 
+/**
+ * @brief 初始化设备服务
+ * @return 0 成功, -1 失败
+ * @details 创建DeviceService单例并初始化
+ */
 int bridge_device_init(void)
 {
     return DeviceService::instance().init() ? 0 : -1;
 }
 
+/**
+ * @brief 反初始化设备服务
+ */
 void bridge_device_deinit(void)
 {
     DeviceService::instance().deinit();
 }
 
+/**
+ * @brief 添加LED设备
+ * @param deviceId 设备唯一标识符
+ * @param gpioPath GPIO设备路径
+ * @return 0 成功, -1 失败
+ */
 int bridge_led_add(const char *deviceId, const char *gpioPath)
 {
     if (!deviceId || !gpioPath)
@@ -309,6 +416,11 @@ int bridge_led_add(const char *deviceId, const char *gpioPath)
     return DeviceService::instance().addLed(deviceId, gpioPath) ? 0 : -1;
 }
 
+/**
+ * @brief 移除LED设备
+ * @param deviceId 设备唯一标识符
+ * @return 0 成功, -1 失败
+ */
 int bridge_led_remove(const char *deviceId)
 {
     if (!deviceId)
@@ -317,6 +429,11 @@ int bridge_led_remove(const char *deviceId)
     return DeviceService::instance().removeDevice(deviceId) ? 0 : -1;
 }
 
+/**
+ * @brief 打开LED
+ * @param deviceId 设备唯一标识符
+ * @return 0 成功, -1 失败
+ */
 int bridge_led_set_on(const char *deviceId)
 {
     if (!deviceId)
@@ -325,6 +442,11 @@ int bridge_led_set_on(const char *deviceId)
     return DeviceService::instance().setDeviceOn(deviceId) ? 0 : -1;
 }
 
+/**
+ * @brief 关闭LED
+ * @param deviceId 设备唯一标识符
+ * @return 0 成功, -1 失败
+ */
 int bridge_led_set_off(const char *deviceId)
 {
     if (!deviceId)
@@ -333,6 +455,11 @@ int bridge_led_set_off(const char *deviceId)
     return DeviceService::instance().setDeviceOff(deviceId) ? 0 : -1;
 }
 
+/**
+ * @brief 切换LED状态
+ * @param deviceId 设备唯一标识符
+ * @return 0 成功, -1 失败
+ */
 int bridge_led_toggle(const char *deviceId)
 {
     if (!deviceId)
@@ -341,6 +468,11 @@ int bridge_led_toggle(const char *deviceId)
     return DeviceService::instance().toggleDevice(deviceId) ? 0 : -1;
 }
 
+/**
+ * @brief 获取LED状态
+ * @param deviceId 设备唯一标识符
+ * @return 1 打开, 0 关闭或设备不存在
+ */
 int bridge_led_get_state(const char *deviceId)
 {
     if (!deviceId)
@@ -349,6 +481,12 @@ int bridge_led_get_state(const char *deviceId)
     return DeviceService::instance().getDeviceState(deviceId) ? 1 : 0;
 }
 
+/**
+ * @brief 添加蜂鸣器设备
+ * @param deviceId 设备唯一标识符
+ * @param gpioPath GPIO设备路径
+ * @return 0 成功, -1 失败
+ */
 int bridge_buzzer_add(const char *deviceId, const char *gpioPath)
 {
     if (!deviceId || !gpioPath)
@@ -357,6 +495,11 @@ int bridge_buzzer_add(const char *deviceId, const char *gpioPath)
     return DeviceService::instance().addBuzzer(deviceId, gpioPath) ? 0 : -1;
 }
 
+/**
+ * @brief 打开蜂鸣器
+ * @param deviceId 设备唯一标识符
+ * @return 0 成功, -1 失败
+ */
 int bridge_buzzer_on(const char *deviceId)
 {
     if (!deviceId)
@@ -365,6 +508,11 @@ int bridge_buzzer_on(const char *deviceId)
     return DeviceService::instance().buzzerOn(deviceId) ? 0 : -1;
 }
 
+/**
+ * @brief 关闭蜂鸣器
+ * @param deviceId 设备唯一标识符
+ * @return 0 成功, -1 失败
+ */
 int bridge_buzzer_off(const char *deviceId)
 {
     if (!deviceId)
@@ -373,6 +521,12 @@ int bridge_buzzer_off(const char *deviceId)
     return DeviceService::instance().buzzerOff(deviceId) ? 0 : -1;
 }
 
+/**
+ * @brief 蜂鸣器响一声
+ * @param deviceId 设备唯一标识符
+ * @param durationMs 响铃持续时间(毫秒)
+ * @return 0 成功, -1 失败
+ */
 int bridge_buzzer_beep(const char *deviceId, int durationMs)
 {
     if (!deviceId)
@@ -381,6 +535,14 @@ int bridge_buzzer_beep(const char *deviceId, int durationMs)
     return DeviceService::instance().buzzerBeep(deviceId, durationMs) ? 0 : -1;
 }
 
+/**
+ * @brief 蜂鸣器响多声
+ * @param deviceId 设备唯一标识符
+ * @param onMs 每声持续时间(毫秒)
+ * @param offMs 每声间隔时间(毫秒)
+ * @param count 响声次数
+ * @return 0 成功, -1 失败
+ */
 int bridge_buzzer_beep_pattern(const char *deviceId, int onMs, int offMs, int count)
 {
     if (!deviceId)
@@ -389,6 +551,12 @@ int bridge_buzzer_beep_pattern(const char *deviceId, int onMs, int offMs, int co
     return DeviceService::instance().buzzerBeepPattern(deviceId, onMs, offMs, count) ? 0 : -1;
 }
 
+/**
+ * @brief 添加DHT11传感器
+ * @param deviceId 设备唯一标识符
+ * @param devPath 设备文件路径
+ * @return 0 成功, -1 失败
+ */
 int bridge_dht11_add(const char *deviceId, const char *devPath)
 {
     if (!deviceId || !devPath)
@@ -397,6 +565,11 @@ int bridge_dht11_add(const char *deviceId, const char *devPath)
     return DeviceService::instance().addDht11(deviceId, devPath) ? 0 : -1;
 }
 
+/**
+ * @brief 读取DHT11温度
+ * @param deviceId 设备唯一标识符
+ * @return int 温度值(摄氏度),失败返回0
+ */
 int bridge_dht11_get_temp(const char *deviceId)
 {
     if (!deviceId)
@@ -405,6 +578,11 @@ int bridge_dht11_get_temp(const char *deviceId)
     return DeviceService::instance().getTemperature(deviceId);
 }
 
+/**
+ * @brief 读取DHT11湿度
+ * @param deviceId 设备唯一标识符
+ * @return int 湿度值(%),失败返回0
+ */
 int bridge_dht11_get_humi(const char *deviceId)
 {
     if (!deviceId)
@@ -413,16 +591,31 @@ int bridge_dht11_get_humi(const char *deviceId)
     return DeviceService::instance().getHumidity(deviceId);
 }
 
+/**
+ * @brief 启用/禁用传感器数据上报
+ * @param enable 1启用, 0禁用
+ * @param intervalSec 上报间隔(秒)
+ */
 void bridge_sensor_report_enable(int enable, int intervalSec)
 {
     DeviceService::instance().enableSensorReport(enable != 0, intervalSec);
 }
 
+/**
+ * @brief 单次传感器数据上报
+ */
 void bridge_sensor_report_once(void)
 {
     DeviceService::instance().reportSensorData();
 }
 
+/**
+ * @brief 连接MQTT服务器
+ * @param host 服务器地址
+ * @param port 端口号
+ * @param clientId 客户端ID(可为NULL,使用默认值)
+ * @return 0 成功, -1 失败
+ */
 int bridge_mqtt_connect(const char *host, int port, const char *clientId)
 {
     if (!host)
@@ -432,11 +625,18 @@ int bridge_mqtt_connect(const char *host, int port, const char *clientId)
     return DeviceService::instance().connectMqtt(host, port, id) ? 0 : -1;
 }
 
+/**
+ * @brief 断开MQTT连接
+ */
 void bridge_mqtt_disconnect(void)
 {
     DeviceService::instance().disconnectMqtt();
 }
 
+/**
+ * @brief 检查MQTT连接状态
+ * @return 1 已连接, 0 未连接
+ */
 int bridge_mqtt_is_connected(void)
 {
     return DeviceService::instance().isMqttConnected() ? 1 : 0;

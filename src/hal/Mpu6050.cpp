@@ -9,6 +9,10 @@
 
 #define RAD_TO_DEG 57.295779513082320876
 
+/**
+ * @brief 构造函数
+ * @details 初始化角度、温度、卡尔曼滤波器等成员变量
+ */
 Mpu6050::Mpu6050()
     : m_fd(-1), m_roll(0), m_pitch(0), m_yaw(0), m_temperature(0), m_lastTime(0), m_gyroBiasX(0), m_gyroBiasY(0),
       m_gyroBiasZ(0)
@@ -17,11 +21,21 @@ Mpu6050::Mpu6050()
     kalmanInit(&m_kalmanY);
 }
 
+/**
+ * @brief 析构函数
+ * @details 自动关闭设备文件
+ */
 Mpu6050::~Mpu6050()
 {
     close();
 }
 
+/**
+ * @brief 打开MPU6050设备
+ * @return true 打开成功
+ * @return false 打开失败
+ * @details 打开设备文件并执行陀螺仪校准
+ */
 bool Mpu6050::open()
 {
     m_fd = ::open(APP_DEV_MPU6050, O_RDONLY);
@@ -35,6 +49,9 @@ bool Mpu6050::open()
     return true;
 }
 
+/**
+ * @brief 关闭MPU6050设备
+ */
 void Mpu6050::close()
 {
     if (m_fd >= 0)
@@ -44,6 +61,10 @@ void Mpu6050::close()
     }
 }
 
+/**
+ * @brief 陀螺仪校准
+ * @details 采集500个样本计算陀螺仪零点偏移量
+ */
 void Mpu6050::calibrate()
 {
     printf("Keep sensor still! Calibrating gyro...\n");
@@ -68,6 +89,10 @@ void Mpu6050::calibrate()
     printf("Calibration Done! Bias X:%.3f Y:%.3f Z:%.3f\n", m_gyroBiasX, m_gyroBiasY, m_gyroBiasZ);
 }
 
+/**
+ * @brief 获取当前时间(秒)
+ * @return double 当前时间戳(秒)
+ */
 double Mpu6050::getTimeSec()
 {
     struct timeval tv;
@@ -75,6 +100,11 @@ double Mpu6050::getTimeSec()
     return tv.tv_sec + tv.tv_usec / 1000000.0;
 }
 
+/**
+ * @brief 初始化卡尔曼滤波器
+ * @param k 卡尔曼滤波器结构指针
+ * @details 设置过程噪声、测量噪声等参数
+ */
 void Mpu6050::kalmanInit(KalmanFilter *k)
 {
     k->Q_angle = 0.001f;
@@ -90,10 +120,17 @@ void Mpu6050::kalmanInit(KalmanFilter *k)
     k->P[1][1] = 0.0f;
 }
 
-// 卡尔曼核心算法
+/**
+ * @brief 卡尔曼滤波核心算法
+ * @param k 卡尔曼滤波器结构指针
+ * @param newAngle 加速度计测量的角度(观测值)
+ * @param newRate 陀螺仪测量的角速度
+ * @param dt 时间间隔(秒)
+ * @return float 滤波后的角度
+ * @details 融合加速度计和陀螺仪数据,输出稳定的角度估计
+ */
 float Mpu6050::kalmanGetAngle(KalmanFilter *k, float newAngle, float newRate, float dt)
 {
-    // 1. 预测 (Predict)
     float rate = newRate - k->bias;
     k->angle += dt * rate;
 
@@ -102,13 +139,12 @@ float Mpu6050::kalmanGetAngle(KalmanFilter *k, float newAngle, float newRate, fl
     k->P[1][0] -= dt * k->P[1][1];
     k->P[1][1] += k->Q_bias * dt;
 
-    // 2. 更新 (Update)
-    float S = k->P[0][0] + k->R_measure; // 创新协方差
-    float K[2];                          // 卡尔曼增益
+    float S = k->P[0][0] + k->R_measure;
+    float K[2];
     K[0] = k->P[0][0] / S;
     K[1] = k->P[1][0] / S;
 
-    float y = newAngle - k->angle; // 创新 (Innovation)
+    float y = newAngle - k->angle;
 
     k->angle += K[0] * y;
     k->bias += K[1] * y;
@@ -124,13 +160,18 @@ float Mpu6050::kalmanGetAngle(KalmanFilter *k, float newAngle, float newRate, fl
     return k->angle;
 }
 
+/**
+ * @brief 更新传感器数据
+ * @return true 更新成功
+ * @return false 更新失败(设备未打开或读取失败)
+ * @details 读取原始数据,转换为物理单位,应用卡尔曼滤波计算姿态角
+ */
 bool Mpu6050::update()
 {
     if (m_fd < 0)
         return false;
 
     struct RawData raw;
-    // 尝试读取一次数据，非阻塞调用者
     if (read(m_fd, &raw, sizeof(raw)) != sizeof(raw))
     {
         return false;
@@ -140,9 +181,8 @@ bool Mpu6050::update()
     double dt = current_time - m_lastTime;
     m_lastTime = current_time;
     if (dt <= 0)
-        dt = 0.01; // 防止除零或负数
+        dt = 0.01;
 
-    // 数据解析
     short ax_raw = (raw.accel_x_h << 8) | raw.accel_x_l;
     short ay_raw = (raw.accel_y_h << 8) | raw.accel_y_l;
     short az_raw = (raw.accel_z_h << 8) | raw.accel_z_l;
@@ -151,7 +191,6 @@ bool Mpu6050::update()
     short gz_raw = (raw.gyro_z_h << 8) | raw.gyro_z_l;
     short temp_raw = (raw.temp_h << 8) | raw.temp_l;
 
-    // 物理单位转换 & 减去零点偏差
     float ax = ax_raw / 16384.0f;
     float ay = ay_raw / 16384.0f;
     float az = az_raw / 16384.0f;
@@ -161,21 +200,16 @@ bool Mpu6050::update()
 
     m_temperature = temp_raw / 340.0f + 36.53f;
 
-    // --- 死区设置 (防止静止时的微小漂移) ---
     if (fabs(gx) < 0.05)
         gx = 0;
     if (fabs(gy) < 0.05)
         gy = 0;
     if (fabs(gz) < 0.05)
-        gz = 0; // 最关键的 Yaw 轴死区
+        gz = 0;
 
-    // --- 卡尔曼滤波步骤 ---
-
-    // 1. 计算加速度计的角度 (观测值)
     float acc_roll = atan2(ay, az) * RAD_TO_DEG;
     float acc_pitch = atan2(-ax, sqrt(ay * ay + az * az)) * RAD_TO_DEG;
 
-    // 2. 传入卡尔曼滤波器
     m_roll = kalmanGetAngle(&m_kalmanX, acc_roll, gx, dt);
     m_pitch = kalmanGetAngle(&m_kalmanY, acc_pitch, gy, dt);
 

@@ -8,6 +8,11 @@
 
 using json = nlohmann::json;
 
+/**
+ * @brief 构造函数
+ * @param apiKey 和风天气API密钥
+ * @details 初始化API密钥、基础URL和cURL库
+ */
 WeatherService::WeatherService(const std::string &apiKey)
     : m_apiKey(apiKey), m_baseUrl("https://pu3qqpnwdn.re.qweatherapi.com")
 {
@@ -15,17 +20,35 @@ WeatherService::WeatherService(const std::string &apiKey)
     curl_global_init(CURL_GLOBAL_DEFAULT);
 }
 
+/**
+ * @brief 析构函数
+ * @details 清理cURL全局资源
+ */
 WeatherService::~WeatherService()
 {
     curl_global_cleanup();
 }
 
+/**
+ * @brief cURL写回调函数
+ * @param contents 接收到的数据
+ * @param size 每个元素大小
+ * @param nmemb 元素数量
+ * @param userp 用户数据指针(字符串缓冲区)
+ * @return size_t 已处理字节数
+ */
 size_t WeatherService::writeCallback(void *contents, size_t size, size_t nmemb, void *userp)
 {
     ((std::string *)userp)->append((char *)contents, size * nmemb);
     return size * nmemb;
 }
 
+/**
+ * @brief 执行HTTP GET请求
+ * @param url 请求URL
+ * @return std::string 响应内容
+ * @details 使用cURL执行HTTPS请求,禁用SSL证书验证
+ */
 std::string WeatherService::performGetRequest(const std::string &url)
 {
     CURL *curl;
@@ -52,6 +75,11 @@ std::string WeatherService::performGetRequest(const std::string &url)
     return readBuffer;
 }
 
+/**
+ * @brief URL编码
+ * @param value 待编码字符串
+ * @return std::string 编码后的字符串
+ */
 std::string WeatherService::urlEncode(const std::string &value)
 {
     CURL *curl = curl_easy_init();
@@ -70,6 +98,12 @@ std::string WeatherService::urlEncode(const std::string &value)
     return value;
 }
 
+/**
+ * @brief 查询城市位置ID
+ * @param cityName 城市名称或ID
+ * @return std::string 城市ID,失败返回空字符串
+ * @details 如果输入已是纯数字则直接返回,否则调用GeoAPI查询
+ */
 std::string WeatherService::lookupLocationId(const std::string &cityName)
 {
     if (cityName.find_first_not_of("0123456789") == std::string::npos)
@@ -119,12 +153,22 @@ std::string WeatherService::lookupLocationId(const std::string &cityName)
     return "";
 }
 
+/**
+ * @brief 异步更新天气数据
+ * @param city 城市名称
+ * @details 启动后台线程获取天气数据
+ */
 void WeatherService::updateWeatherAsync(const std::string &city)
 {
     std::thread t([this, city]() { this->fetchFromApi(city); });
     t.detach();
 }
 
+/**
+ * @brief 从API获取天气数据
+ * @param city 城市名称
+ * @details 先查询城市ID,再获取当前天气和3天预报
+ */
 void WeatherService::fetchFromApi(const std::string &city)
 {
     std::string locationId = lookupLocationId(city);
@@ -145,6 +189,11 @@ void WeatherService::fetchFromApi(const std::string &city)
     parseForecast(forecastResp);
 }
 
+/**
+ * @brief 解析当前天气JSON响应
+ * @param response JSON响应字符串
+ * @details 解析温度、湿度、体感温度、风速、风向、天气图标等
+ */
 void WeatherService::parseCurrentWeather(const std::string &response)
 {
     if (response.empty())
@@ -202,6 +251,11 @@ void WeatherService::parseCurrentWeather(const std::string &response)
     }
 }
 
+/**
+ * @brief 解析天气预报JSON响应
+ * @param response JSON响应字符串
+ * @details 解析未来3天的天气预报数据
+ */
 void WeatherService::parseForecast(const std::string &response)
 {
     if (response.empty())
@@ -265,6 +319,10 @@ void WeatherService::parseForecast(const std::string &response)
     }
 }
 
+/**
+ * @brief 获取天气数据
+ * @return WeatherData 当前天气数据结构
+ */
 WeatherData WeatherService::getWeatherData() const
 {
     return m_currentData;

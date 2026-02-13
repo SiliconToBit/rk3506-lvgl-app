@@ -1,6 +1,10 @@
 #include "AudioDevice.h"
 #include <iostream>
 
+/**
+ * @brief 构造函数
+ * @details 初始化PCM句柄和设备名称为默认值
+ */
 AudioDevice::AudioDevice()
     : m_pcmHandle(nullptr)
     , m_deviceName("default")
@@ -8,11 +12,23 @@ AudioDevice::AudioDevice()
 {
 }
 
+/**
+ * @brief 析构函数
+ * @details 自动关闭音频设备
+ */
 AudioDevice::~AudioDevice()
 {
     close();
 }
 
+/**
+ * @brief 打开音频设备
+ * @param rate 采样率(Hz)
+ * @param channels 声道数(1=单声道, 2=立体声)
+ * @return true 打开成功
+ * @return false 打开失败
+ * @details 配置PCM设备参数:16位小端格式,交错访问模式
+ */
 bool AudioDevice::open(unsigned int rate, int channels)
 {
     if (m_pcmHandle)
@@ -41,6 +57,10 @@ bool AudioDevice::open(unsigned int rate, int channels)
     return true;
 }
 
+/**
+ * @brief 关闭音频设备
+ * @details 排空缓冲区并关闭PCM设备
+ */
 void AudioDevice::close()
 {
     if (m_pcmHandle)
@@ -51,6 +71,13 @@ void AudioDevice::close()
     }
 }
 
+/**
+ * @brief 写入音频数据
+ * @param buffer 音频数据缓冲区
+ * @param frames 帧数
+ * @return snd_pcm_sframes_t 实际写入的帧数,失败返回负值
+ * @details 写入PCM数据,出错时自动恢复
+ */
 snd_pcm_sframes_t AudioDevice::write(const void* buffer, snd_pcm_uframes_t frames)
 {
     if (!m_pcmHandle)
@@ -69,6 +96,10 @@ snd_pcm_sframes_t AudioDevice::write(const void* buffer, snd_pcm_uframes_t frame
     return frames_written;
 }
 
+/**
+ * @brief 准备PCM设备
+ * @details 将PCM设备置于准备状态
+ */
 void AudioDevice::prepare()
 {
     if (m_pcmHandle)
@@ -77,6 +108,14 @@ void AudioDevice::prepare()
     }
 }
 
+/**
+ * @brief 初始化混音器
+ * @param handle 输出参数,混音器句柄
+ * @param elem 输出参数,混音器元素
+ * @return true 初始化成功
+ * @return false 初始化失败
+ * @details 打开混音器并查找指定元素
+ */
 bool AudioDevice::initMixer(snd_mixer_t** handle, snd_mixer_elem_t** elem)
 {
     snd_mixer_selem_id_t* sid;
@@ -113,6 +152,11 @@ bool AudioDevice::initMixer(snd_mixer_t** handle, snd_mixer_elem_t** elem)
     return true;
 }
 
+/**
+ * @brief 设置音量
+ * @param volume 音量百分比(0-100)
+ * @details 通过ALSA混音器设置主音量
+ */
 void AudioDevice::setVolume(long volume)
 {
     snd_mixer_t* handle;
@@ -128,6 +172,11 @@ void AudioDevice::setVolume(long volume)
     }
 }
 
+/**
+ * @brief 获取当前音量
+ * @return long 音量百分比(0-100)
+ * @details 通过ALSA混音器读取主音量
+ */
 long AudioDevice::getVolume()
 {
     snd_mixer_t* handle;

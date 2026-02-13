@@ -1,5 +1,9 @@
 #include "MediaDecoder.h"
 
+/**
+ * @brief 构造函数
+ * @details 初始化FFmpeg相关结构体指针并分配packet和frame
+ */
 MediaDecoder::MediaDecoder()
     : m_fmtCtx(nullptr), m_decCtx(nullptr), m_audioStreamIndex(-1), m_packet(nullptr), m_frame(nullptr),
       m_swrCtx(nullptr), m_dstData(nullptr), m_dstLinesize(0), m_maxDstNbSamples(0), m_currentTime(0.0)
@@ -8,6 +12,10 @@ MediaDecoder::MediaDecoder()
     m_frame = av_frame_alloc();
 }
 
+/**
+ * @brief 析构函数
+ * @details 释放所有FFmpeg资源
+ */
 MediaDecoder::~MediaDecoder()
 {
     close();
@@ -17,6 +25,13 @@ MediaDecoder::~MediaDecoder()
         av_frame_free(&m_frame);
 }
 
+/**
+ * @brief 打开媒体文件
+ * @param url 文件路径
+ * @return true 打开成功
+ * @return false 打开失败
+ * @details 打开文件,查找音频流,初始化解码器和重采样器
+ */
 bool MediaDecoder::open(const char *url)
 {
     int ret;
@@ -94,6 +109,13 @@ bool MediaDecoder::open(const char *url)
     return true;
 }
 
+/**
+ * @brief 解码音频数据
+ * @param callback 音频数据回调函数
+ * @return true 解码成功(可能还有更多数据)
+ * @return false 解码完成或失败
+ * @details 读取一帧数据,解码并通过重采样转换为16位立体声44100Hz格式
+ */
 bool MediaDecoder::decode(std::function<void(uint8_t *, int)> callback)
 {
     if (!m_fmtCtx || !m_decCtx)
@@ -168,6 +190,10 @@ bool MediaDecoder::decode(std::function<void(uint8_t *, int)> callback)
     return true;
 }
 
+/**
+ * @brief 关闭解码器
+ * @details 释放所有FFmpeg相关资源
+ */
 void MediaDecoder::close()
 {
     if (m_dstData)
@@ -194,11 +220,19 @@ void MediaDecoder::close()
     m_maxDstNbSamples = 0;
 }
 
+/**
+ * @brief 获取当前播放时间
+ * @return double 当前时间(秒)
+ */
 double MediaDecoder::getCurrentTime() const
 {
     return m_currentTime;
 }
 
+/**
+ * @brief 获取媒体总时长
+ * @return double 总时长(秒)
+ */
 double MediaDecoder::getDuration() const
 {
     if (m_fmtCtx && m_fmtCtx->duration != AV_NOPTS_VALUE)
@@ -208,6 +242,13 @@ double MediaDecoder::getDuration() const
     return 0.0;
 }
 
+/**
+ * @brief 跳转到指定时间点
+ * @param seconds 目标时间(秒)
+ * @return true 跳转成功
+ * @return false 跳转失败
+ * @details 使用关键帧跳转,跳转后刷新解码器缓冲区
+ */
 bool MediaDecoder::seek(double seconds)
 {
     if (!m_fmtCtx || m_audioStreamIndex < 0)

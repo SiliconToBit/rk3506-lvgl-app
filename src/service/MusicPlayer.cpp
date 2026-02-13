@@ -7,6 +7,10 @@
 #include <sstream>
 #include <sys/stat.h>
 
+/**
+ * @brief 构造函数
+ * @details 初始化播放索引和状态标志
+ */
 MusicPlayer::MusicPlayer()
     : m_currentIndex(-1)
     , m_running(false)
@@ -15,11 +19,20 @@ MusicPlayer::MusicPlayer()
 {
 }
 
+/**
+ * @brief 析构函数
+ * @details 自动停止播放
+ */
 MusicPlayer::~MusicPlayer()
 {
     stop();
 }
 
+/**
+ * @brief 扫描音乐目录
+ * @param dirPath 目录路径
+ * @details 扫描目录中的.wav和.mp3文件,添加到播放列表并排序
+ */
 void MusicPlayer::scanDirectory(const std::string& dirPath)
 {
     m_playlist.clear();
@@ -62,11 +75,20 @@ void MusicPlayer::scanDirectory(const std::string& dirPath)
     }
 }
 
+/**
+ * @brief 获取播放列表
+ * @return const std::vector<std::string>& 播放列表引用
+ */
 const std::vector<std::string>& MusicPlayer::getPlaylist() const
 {
     return m_playlist;
 }
 
+/**
+ * @brief 播放线程主循环
+ * @param filepath 音频文件路径
+ * @details 打开解码器和音频设备,循环解码播放直到停止或播放完成
+ */
 void MusicPlayer::playbackLoop(std::string filepath)
 {
     if (!m_decoder.open(filepath.c_str()))
@@ -122,6 +144,11 @@ void MusicPlayer::playbackLoop(std::string filepath)
     std::cout << "Playback finished: " << filepath << std::endl;
 }
 
+/**
+ * @brief 播放指定文件
+ * @param filepath 文件路径
+ * @details 停止当前播放,加载歌词,启动播放线程
+ */
 void MusicPlayer::playFile(const std::string& filepath)
 {
     stop();
@@ -136,6 +163,10 @@ void MusicPlayer::playFile(const std::string& filepath)
     m_playbackThread = std::thread(&MusicPlayer::playbackLoop, this, filepath);
 }
 
+/**
+ * @brief 播放指定索引的歌曲
+ * @param index 播放列表索引
+ */
 void MusicPlayer::play(int index)
 {
     if (index >= 0 && index < m_playlist.size())
@@ -145,11 +176,18 @@ void MusicPlayer::play(int index)
     }
 }
 
+/**
+ * @brief 播放指定文件名
+ * @param filename 文件名或路径
+ */
 void MusicPlayer::play(const std::string& filename)
 {
     playFile(filename);
 }
 
+/**
+ * @brief 播放当前歌曲
+ */
 void MusicPlayer::play()
 {
     if (m_currentIndex >= 0 && m_currentIndex < m_playlist.size())
@@ -158,11 +196,19 @@ void MusicPlayer::play()
     }
 }
 
+/**
+ * @brief 从指定时间点开始播放
+ * @param time 时间点(秒)
+ */
 void MusicPlayer::play(double time)
 {
     m_decoder.seek(time);
 }
 
+/**
+ * @brief 加载音乐到解码器(不播放)
+ * @param index 播放列表索引
+ */
 void MusicPlayer::loadMusic(int index)
 {
     if (index >= 0 && index < m_playlist.size())
@@ -182,6 +228,9 @@ void MusicPlayer::loadMusic(int index)
     }
 }
 
+/**
+ * @brief 暂停播放
+ */
 void MusicPlayer::pause()
 {
     if (m_running && !m_paused)
@@ -191,6 +240,9 @@ void MusicPlayer::pause()
     }
 }
 
+/**
+ * @brief 恢复播放
+ */
 void MusicPlayer::resume()
 {
     if (m_running && m_paused)
@@ -200,6 +252,10 @@ void MusicPlayer::resume()
     }
 }
 
+/**
+ * @brief 停止播放
+ * @details 设置停止标志并等待播放线程结束
+ */
 void MusicPlayer::stop()
 {
     m_stopRequest = true;
@@ -213,6 +269,10 @@ void MusicPlayer::stop()
     m_running = false;
 }
 
+/**
+ * @brief 播放下一首
+ * @details 切换到播放列表中的下一首歌曲
+ */
 void MusicPlayer::next()
 {
     if (m_playlist.empty())
@@ -234,6 +294,10 @@ void MusicPlayer::next()
     }
 }
 
+/**
+ * @brief 播放上一首
+ * @details 切换到播放列表中的上一首歌曲
+ */
 void MusicPlayer::prev()
 {
     if (m_playlist.empty())
@@ -255,11 +319,20 @@ void MusicPlayer::prev()
     }
 }
 
+/**
+ * @brief 检查是否正在播放
+ * @return true 正在播放
+ * @return false 未播放或已暂停
+ */
 bool MusicPlayer::isPlaying() const
 {
     return m_running && !m_paused;
 }
 
+/**
+ * @brief 获取当前歌曲名称
+ * @return std::string 歌曲文件名(不含路径)
+ */
 std::string MusicPlayer::getCurrentSongName() const
 {
     if (m_currentIndex >= 0 && m_currentIndex < m_playlist.size())
@@ -275,6 +348,11 @@ std::string MusicPlayer::getCurrentSongName() const
     return "";
 }
 
+/**
+ * @brief 获取当前歌曲歌词内容
+ * @return std::string LRC歌词文件内容
+ * @details 查找与音频文件同名的.lrc文件并读取内容
+ */
 std::string MusicPlayer::getCurrentSongLyrics() const
 {
     if (m_currentIndex >= 0 && m_currentIndex < m_playlist.size())
@@ -299,6 +377,11 @@ std::string MusicPlayer::getCurrentSongLyrics() const
     return "";
 }
 
+/**
+ * @brief 获取当前歌曲专辑封面路径
+ * @return std::string 封面图片路径,不存在返回空字符串
+ * @details 查找与音频文件同名的.jpg或.png文件
+ */
 std::string MusicPlayer::getCurrentAlbumCoverPath() const
 {
     if (m_currentIndex >= 0 && m_currentIndex < m_playlist.size())
@@ -321,26 +404,47 @@ std::string MusicPlayer::getCurrentAlbumCoverPath() const
     return "";
 }
 
+/**
+ * @brief 获取当前播放时间
+ * @return double 当前时间(秒)
+ */
 double MusicPlayer::getMusicCurrentTime() const
 {
     return m_decoder.getCurrentTime();
 }
 
+/**
+ * @brief 获取音乐总时长
+ * @return double 总时长(秒)
+ */
 double MusicPlayer::getMusicDuration() const
 {
     return m_decoder.getDuration();
 }
 
+/**
+ * @brief 设置音量
+ * @param volume 音量值(0-100)
+ */
 void MusicPlayer::setVolume(long volume)
 {
     m_audioDevice.setVolume(volume);
 }
 
+/**
+ * @brief 获取当前音量
+ * @return long 音量值(0-100)
+ */
 long MusicPlayer::getVolume()
 {
     return m_audioDevice.getVolume();
 }
 
+/**
+ * @brief 解析LRC歌词
+ * @param lrcContent LRC格式歌词内容
+ * @details 将歌词按时间戳解析并排序存储
+ */
 void MusicPlayer::parseLrc(const std::string& lrcContent)
 {
     m_currentLyrics.clear();
@@ -372,6 +476,11 @@ void MusicPlayer::parseLrc(const std::string& lrcContent)
               [](const LyricLine& a, const LyricLine& b) { return a.time < b.time; });
 }
 
+/**
+ * @brief 获取指定时间对应的歌词行
+ * @param time 时间点(秒)
+ * @return std::string 歌词文本,无匹配返回空字符串
+ */
 std::string MusicPlayer::getCurrentLyricLine(double time) const
 {
     if (m_currentLyrics.empty())
