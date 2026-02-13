@@ -6,13 +6,8 @@
 #ifndef __MAIN_H__
 #define __MAIN_H__
 
-// 仅保留主程序必需的头文件
-#include <signal.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <unistd.h>
+// 仅保留主程序必需的头文件 
 
-#include "lv_port_init.h"
 #include <lvgl/lvgl.h>
 
 // 宏定义

@@ -98,14 +98,14 @@ static bool create_freetype_font(const char *font_path, uint16_t size, lv_style_
  */
 static bool check_font_file(const char *font_path)
 {
-    FILE *fp = fopen(font_path, "r");
-    if (fp == NULL)
+    FILE *file = fopen(font_path, "r");
+    if (file == NULL)
     {
         LV_LOG_ERROR("Font file not found: %s", font_path);
         perror("fopen");
         return false;
     }
-    fclose(fp);
+    fclose(file);
     return true;
 }
 

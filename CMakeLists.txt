@@ -3,6 +3,9 @@ cmake_minimum_required(VERSION 3.10)
 # 项目名称和语言设置
 project(lvgl_demo LANGUAGES C CXX)
 
+# 生成 compile_commands.json 供 clangd 使用
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # C 语言标准设置：使用 C11 标准
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
