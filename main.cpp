@@ -83,6 +83,7 @@ int main(int argc, char **argv)
 
     /*****************************用户程序开始*************************************/
 
+    
     if (bridge_init() != 0)
     {
         std::cerr << "[Main] Bridge init failed" << '\n';

@@ -3,6 +3,8 @@
 #include "Backlight.h"
 #include "DeviceService.h"
 #include "Dht11.h"
+#include "IRDevice.h"
+#include "IRCommandManager.h"
 #include "MusicPlayer.h"
 #include "WeatherService.h"
 #include <cstdlib>
@@ -15,6 +17,11 @@ static MusicPlayer *s_player = nullptr;
 static Dht11 *s_dht11 = nullptr;
 static Backlight *s_backlight = nullptr;
 static WeatherService *s_weatherService = nullptr;
+static IRDevice *s_irDevice = nullptr;
+
+// 红外学习回调
+static IRLearnCompleteCallback s_irLearnCompleteCallback = nullptr;
+static IRLearnStatusCallback s_irStatusCallback = nullptr;
 
 /**
  * @brief 初始化桥接层
@@ -49,6 +56,35 @@ int bridge_init(void)
         return -1;
     }
 
+    // 初始化红外学习模块（用于Home Assistant远程控制）
+    s_irDevice = new (std::nothrow) IRDevice(APP_DEV_IR);
+    if (s_irDevice && s_irDevice->open())
+    {
+        std::cout << "[Bridge] IR device initialized: " << APP_DEV_IR << std::endl;
+
+        // 设置回调
+        s_irDevice->setOnLearnComplete([](const IRCode &code) {
+            if (s_irLearnCompleteCallback)
+            {
+                s_irLearnCompleteCallback(code.index, code.data.data(), code.data.size());
+            }
+        });
+
+        s_irDevice->setOnStatusChange([](IRLearnStatus status) {
+            if (s_irStatusCallback)
+            {
+                s_irStatusCallback(static_cast<int>(status));
+            }
+        });
+    }
+    else
+    {
+        std::cerr << "[Bridge] Warning: Failed to init IR device (optional)" << std::endl;
+        delete s_irDevice;
+        s_irDevice = nullptr;
+        // 红外模块失败不影响整体初始化
+    }
+
     std::cout << "[Bridge] Initialized successfully" << std::endl;
     return 0;
 }
@@ -59,6 +95,9 @@ int bridge_init(void)
  */
 void bridge_deinit(void)
 {
+    delete s_irDevice;
+    s_irDevice = nullptr;
+
     delete s_weatherService;
     s_weatherService = nullptr;
 
@@ -640,4 +679,358 @@ void bridge_mqtt_disconnect(void)
 int bridge_mqtt_is_connected(void)
 {
     return DeviceService::instance().isMqttConnected() ? 1 : 0;
+}
+
+/**
+ * @brief 初始化红外学习模块
+ * @param devPath 串口设备路径,如"/dev/ttyS1"
+ * @return 0 成功, -1 失败
+ */
+int bridge_ir_init(const char *devPath)
+{
+    if (!devPath)
+        return -1;
+
+    if (s_irDevice)
+    {
+        delete s_irDevice;
+        s_irDevice = nullptr;
+    }
+
+    s_irDevice = new (std::nothrow) IRDevice(devPath);
+    if (!s_irDevice)
+    {
+        std::cerr << "[Bridge] Failed to create IRDevice" << std::endl;
+        return -1;
+    }
+
+    if (!s_irDevice->open())
+    {
+        std::cerr << "[Bridge] Failed to open IR device: " << devPath << std::endl;
+        delete s_irDevice;
+        s_irDevice = nullptr;
+        return -1;
+    }
+
+    // 设置回调
+    s_irDevice->setOnLearnComplete([](const IRCode &code) {
+        if (s_irLearnCompleteCallback)
+        {
+            s_irLearnCompleteCallback(code.index, code.data.data(), code.data.size());
+        }
+    });
+
+    s_irDevice->setOnStatusChange([](IRLearnStatus status) {
+        if (s_irStatusCallback)
+        {
+            s_irStatusCallback(static_cast<int>(status));
+        }
+    });
+
+    std::cout << "[Bridge] IR device initialized: " << devPath << std::endl;
+    return 0;
+}
+
+/**
+ * @brief 反初始化红外学习模块
+ */
+void bridge_ir_deinit(void)
+{
+    if (s_irDevice)
+    {
+        delete s_irDevice;
+        s_irDevice = nullptr;
+        std::cout << "[Bridge] IR device deinitialized" << std::endl;
+    }
+}
+
+/**
+ * @brief 开始红外学习
+ * @param index 存储索引(0-255)
+ * @return 0 成功, -1 失败
+ */
+int bridge_ir_start_learn(uint8_t index)
+{
+    if (!s_irDevice)
+    {
+        std::cerr << "[Bridge] IR device not initialized" << std::endl;
+        return -1;
+    }
+
+    return s_irDevice->startLearn(index) ? 0 : -1;
+}
+
+/**
+ * @brief 停止红外学习
+ */
+void bridge_ir_stop_learn(void)
+{
+    if (!s_irDevice)
+        return;
+
+    s_irDevice->stopLearn();
+}
+
+/**
+ * @brief 获取红外学习状态
+ * @return 0 空闲, 1 学习中, 2 成功, 3 超时, 4 错误, -1 未初始化
+ */
+int bridge_ir_get_learn_status(void)
+{
+    if (!s_irDevice)
+        return -1;
+
+    return static_cast<int>(s_irDevice->getLearnStatus());
+}
+
+/**
+ * @brief 发射存储的红外码
+ * @param index 存储索引
+ * @return 0 成功, -1 失败
+ */
+int bridge_ir_emit(uint8_t index)
+{
+    if (!s_irDevice)
+    {
+        std::cerr << "[Bridge] IR device not initialized" << std::endl;
+        return -1;
+    }
+
+    return s_irDevice->emitCode(index) ? 0 : -1;
+}
+
+/**
+ * @brief 发射原始红外码
+ * @param data 红外码数据
+ * @param len 数据长度
+ * @return 0 成功, -1 失败
+ */
+int bridge_ir_emit_raw(const uint8_t *data, size_t len)
+{
+    if (!s_irDevice || !data || len == 0)
+    {
+        std::cerr << "[Bridge] IR device not initialized or invalid data" << std::endl;
+        return -1;
+    }
+
+    std::vector<uint8_t> code(data, data + len);
+    return s_irDevice->emitRawCode(code) ? 0 : -1;
+}
+
+/**
+ * @brief 清除指定索引的红外码
+ * @param index 存储索引
+ * @return 0 成功, -1 失败
+ */
+int bridge_ir_clear(uint8_t index)
+{
+    if (!s_irDevice)
+    {
+        std::cerr << "[Bridge] IR device not initialized" << std::endl;
+        return -1;
+    }
+
+    return s_irDevice->clearCode(index) ? 0 : -1;
+}
+
+/**
+ * @brief 清除所有红外码
+ * @return 0 成功, -1 失败
+ */
+int bridge_ir_clear_all(void)
+{
+    if (!s_irDevice)
+    {
+        std::cerr << "[Bridge] IR device not initialized" << std::endl;
+        return -1;
+    }
+
+    return s_irDevice->clearAllCodes() ? 0 : -1;
+}
+
+/**
+ * @brief 设置红外学习完成回调
+ * @param callback 回调函数
+ */
+void bridge_ir_set_learn_complete_callback(IRLearnCompleteCallback callback)
+{
+    s_irLearnCompleteCallback = callback;
+}
+
+/**
+ * @brief 设置红外学习状态回调
+ * @param callback 回调函数
+ */
+void bridge_ir_set_status_callback(IRLearnStatusCallback callback)
+{
+    s_irStatusCallback = callback;
+}
+
+// ========== 红外命令管理 ==========
+
+static IRExtLearnSaveCallback s_irExtLearnSaveCallback = nullptr;
+static std::string s_extLearnDeviceName;
+static std::string s_extLearnCommandName;
+
+int bridge_ir_cmd_init(const char *dataPath)
+{
+    std::string path = dataPath ? dataPath : "/data/ir_commands";
+    return IRCommandManager::getInstance().init(path) ? 0 : -1;
+}
+
+void bridge_ir_cmd_deinit(void)
+{
+    IRCommandManager::getInstance().deinit();
+}
+
+int bridge_ir_cmd_add(const char *deviceName, const char *commandName, const uint8_t *data, size_t len)
+{
+    if (!deviceName || !commandName || !data || len == 0)
+        return -1;
+
+    std::vector<uint8_t> code(data, data + len);
+    return IRCommandManager::getInstance().addCommand(deviceName, commandName, code) ? 0 : -1;
+}
+
+int bridge_ir_cmd_remove(const char *deviceName, const char *commandName)
+{
+    if (!deviceName || !commandName)
+        return -1;
+
+    return IRCommandManager::getInstance().removeCommand(deviceName, commandName) ? 0 : -1;
+}
+
+int bridge_ir_cmd_remove_device(const char *deviceName)
+{
+    if (!deviceName)
+        return -1;
+
+    return IRCommandManager::getInstance().removeDevice(deviceName) ? 0 : -1;
+}
+
+int bridge_ir_cmd_emit(const char *deviceName, const char *commandName)
+{
+    if (!deviceName || !commandName)
+        return -1;
+
+    return IRCommandManager::getInstance().emitCommand(deviceName, commandName) ? 0 : -1;
+}
+
+int bridge_ir_cmd_get(const char *deviceName, const char *commandName, uint8_t *outData, size_t *inOutLen)
+{
+    if (!deviceName || !commandName || !inOutLen)
+        return -1;
+
+    auto data = IRCommandManager::getInstance().getCommand(deviceName, commandName);
+    if (data.empty())
+        return -1;
+
+    if (outData && *inOutLen >= data.size())
+    {
+        std::memcpy(outData, data.data(), data.size());
+    }
+    *inOutLen = data.size();
+    return 0;
+}
+
+char **bridge_ir_cmd_get_devices(size_t *outCount)
+{
+    if (!outCount)
+        return nullptr;
+
+    auto devices = IRCommandManager::getInstance().getDeviceList();
+    *outCount = devices.size();
+
+    if (devices.empty())
+        return nullptr;
+
+    char **c_array = (char **)std::malloc(devices.size() * sizeof(char *));
+    for (size_t i = 0; i < devices.size(); ++i)
+    {
+        c_array[i] = (char *)std::malloc(devices[i].size() + 1);
+        std::strcpy(c_array[i], devices[i].c_str());
+    }
+    return c_array;
+}
+
+void bridge_ir_cmd_free_devices(char **devices, size_t count)
+{
+    if (devices == nullptr)
+        return;
+    for (size_t i = 0; i < count; ++i)
+    {
+        if (devices[i] != nullptr)
+            std::free(devices[i]);
+    }
+    std::free(devices);
+}
+
+char **bridge_ir_cmd_get_commands(const char *deviceName, size_t *outCount)
+{
+    if (!deviceName || !outCount)
+        return nullptr;
+
+    auto commands = IRCommandManager::getInstance().getCommandList(deviceName);
+    *outCount = commands.size();
+
+    if (commands.empty())
+        return nullptr;
+
+    char **c_array = (char **)std::malloc(commands.size() * sizeof(char *));
+    for (size_t i = 0; i < commands.size(); ++i)
+    {
+        c_array[i] = (char *)std::malloc(commands[i].size() + 1);
+        std::strcpy(c_array[i], commands[i].c_str());
+    }
+    return c_array;
+}
+
+void bridge_ir_cmd_free_commands(char **commands, size_t count)
+{
+    if (commands == nullptr)
+        return;
+    for (size_t i = 0; i < count; ++i)
+    {
+        if (commands[i] != nullptr)
+            std::free(commands[i]);
+    }
+    std::free(commands);
+}
+
+int bridge_ir_cmd_exists(const char *deviceName, const char *commandName)
+{
+    if (!deviceName || !commandName)
+        return 0;
+
+    return IRCommandManager::getInstance().commandExists(deviceName, commandName) ? 1 : 0;
+}
+
+int bridge_ir_ext_learn_and_save(const char *deviceName, const char *commandName, IRExtLearnSaveCallback callback)
+{
+    if (!deviceName || !commandName || !s_irDevice)
+        return -1;
+
+    s_extLearnDeviceName = deviceName;
+    s_extLearnCommandName = commandName;
+    s_irExtLearnSaveCallback = callback;
+
+    s_irDevice->setOnExtLearnComplete([](const std::vector<uint8_t> &data) {
+        if (!data.empty())
+        {
+            IRCommandManager::getInstance().addCommand(s_extLearnDeviceName, s_extLearnCommandName, data);
+            if (s_irExtLearnSaveCallback)
+            {
+                s_irExtLearnSaveCallback(1, s_extLearnDeviceName.c_str(), s_extLearnCommandName.c_str());
+            }
+        }
+        else
+        {
+            if (s_irExtLearnSaveCallback)
+            {
+                s_irExtLearnSaveCallback(0, s_extLearnDeviceName.c_str(), s_extLearnCommandName.c_str());
+            }
+        }
+    });
+
+    return s_irDevice->startExtLearn() ? 0 : -1;
 }

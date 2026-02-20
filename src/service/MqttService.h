@@ -11,27 +11,26 @@
 #include <functional>
 #include <memory>
 #include <string>
-
 class MqttService
 {
 public:
-    using MessageCallback = std::function<void(const std::string& topic, const std::string& payload)>;
+    using MessageCallback = std::function<void(const std::string &topic, const std::string &payload)>;
 
     MqttService();
     ~MqttService();
 
-    MqttService(const MqttService&) = delete;
-    MqttService& operator=(const MqttService&) = delete;
+    MqttService(const MqttService &) = delete;
+    MqttService &operator=(const MqttService &) = delete;
 
-    bool connect(const std::string& host, int port, const std::string& clientId = "lvgl_client");
+    bool connect(const std::string &host, int port, const std::string &clientId = "lvgl_client");
     void disconnect();
     bool isConnected() const;
 
-    bool subscribe(const std::string& topic, int qos = 1);
-    bool unsubscribe(const std::string& topic);
+    bool subscribe(const std::string &topic, int qos = 1);
+    bool unsubscribe(const std::string &topic);
 
-    bool publish(const std::string& topic, const std::string& payload, int qos = 1, bool retained = false);
-    bool publish(const std::string& topic, const void* data, size_t size, int qos = 1, bool retained = false);
+    bool publish(const std::string &topic, const std::string &payload, int qos = 1, bool retained = false);
+    bool publish(const std::string &topic, const void *data, size_t size, int qos = 1, bool retained = false);
 
     void setMessageCallback(MessageCallback callback);
 

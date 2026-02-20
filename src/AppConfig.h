@@ -11,6 +11,7 @@
 #define APP_DEV_DHT11 "/dev/dht11"
 #define APP_DEV_MPU6050 "/dev/mpu6050"
 #define APP_DEV_BACKLIGHT "/sys/class/backlight/backlight/"
+#define APP_DEV_IR "/dev/ttyS1"
 
 /* ======================== GPIO 设备路径 ======================= */
 #define APP_GPIO_LED1 "/dev/led1"

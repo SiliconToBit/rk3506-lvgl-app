@@ -1,7 +1,49 @@
 #include "DeviceService.h"
+#include "IRCommandManager.h"
 #include <ctime>
 #include <iostream>
 #include <chrono>
+#include "nlohmann/json.hpp"
+
+using json = nlohmann::json;
+
+namespace
+{
+std::string buildIrAckTopic(const std::string &commandTopic)
+{
+    const std::string suffix = "/cmd";
+    if (commandTopic.size() >= suffix.size() &&
+        commandTopic.compare(commandTopic.size() - suffix.size(), suffix.size(), suffix) == 0)
+    {
+        return commandTopic.substr(0, commandTopic.size() - suffix.size()) + "/ack";
+    }
+    return commandTopic + "/ack";
+}
+
+void publishIrAck(MqttService *mqtt,
+                  const std::string &commandTopic,
+                  const std::string &requestId,
+                  const std::string &device,
+                  const std::string &command,
+                  bool success,
+                  const std::string &message)
+{
+    if (!mqtt || !mqtt->isConnected())
+    {
+        return;
+    }
+
+    const std::string ackTopic = buildIrAckTopic(commandTopic);
+    json ack = {
+        {"request_id", requestId},
+        {"ok", success},
+        {"device", device},
+        {"command", command},
+        {"msg", message},
+    };
+    mqtt->publish(ackTopic, ack.dump());
+}
+}
 
 /**
  * @brief 获取单例实例
@@ -51,6 +93,22 @@ bool DeviceService::init()
         handleMqttMessage(topic, payload);
     });
 
+    if (!IRCommandManager::getInstance().init("/data/ir_commands"))
+    {
+        if (!IRCommandManager::getInstance().init("/root/ir_commands"))
+        {
+            std::cerr << "[DeviceService] Warning: IR command manager init failed, MQTT IR control unavailable" << std::endl;
+        }
+        else
+        {
+            std::cout << "[DeviceService] IR command store: /root/ir_commands" << std::endl;
+        }
+    }
+    else
+    {
+        std::cout << "[DeviceService] IR command store: /data/ir_commands" << std::endl;
+    }
+
     m_initialized = true;
     std::cout << "[DeviceService] Initialized" << std::endl;
     return true;
@@ -73,6 +131,7 @@ void DeviceService::deinit()
     m_dht11s.clear();
     m_deviceInfos.clear();
     m_sensorDatas.clear();
+    IRCommandManager::getInstance().deinit();
     m_mqtt.reset();
     m_initialized = false;
     std::cout << "[DeviceService] Deinitialized" << std::endl;
@@ -675,6 +734,66 @@ void DeviceService::handleMqttMessage(const std::string& topic, const std::strin
     }
 
     std::cout << "[DeviceService] MQTT command: " << payload << std::endl;
+
+    if (!payload.empty() && payload.front() == '{')
+    {
+        std::string deviceName;
+        std::string commandName;
+        std::string requestId;
+
+        try
+        {
+            json cmd = json::parse(payload);
+            if (cmd.contains("request_id"))
+            {
+                const json &requestIdNode = cmd["request_id"];
+                if (requestIdNode.is_string())
+                {
+                    requestId = requestIdNode.get<std::string>();
+                }
+                else if (requestIdNode.is_number_integer())
+                {
+                    requestId = std::to_string(requestIdNode.get<long long>());
+                }
+                else if (requestIdNode.is_number_unsigned())
+                {
+                    requestId = std::to_string(requestIdNode.get<unsigned long long>());
+                }
+                else if (requestIdNode.is_number_float())
+                {
+                    requestId = std::to_string(requestIdNode.get<double>());
+                }
+            }
+
+            if (cmd.contains("device") && cmd["device"].is_string())
+            {
+                deviceName = cmd["device"].get<std::string>();
+            }
+
+            if (cmd.contains("command") && cmd["command"].is_string())
+            {
+                commandName = cmd["command"].get<std::string>();
+            }
+        }
+        catch (const std::exception &)
+        {
+            publishIrAck(m_mqtt.get(), m_commandTopic, requestId, deviceName, commandName,
+                         false, "invalid json command");
+            return;
+        }
+
+        if (!deviceName.empty() && !commandName.empty())
+        {
+            const bool ok = IRCommandManager::getInstance().emitCommand(deviceName, commandName);
+            publishIrAck(m_mqtt.get(), m_commandTopic, requestId, deviceName, commandName,
+                         ok, ok ? "emit success" : "emit failed");
+            return;
+        }
+
+        publishIrAck(m_mqtt.get(), m_commandTopic, requestId, deviceName, commandName,
+                     false, "invalid json command");
+        return;
+    }
 
     if (payload == "led_on")
     {
