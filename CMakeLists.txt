@@ -42,9 +42,10 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/lvgl8
     ${PROJECT_SOURCE_DIR}/common
     ${PROJECT_SOURCE_DIR}/sys
-    ${PROJECT_SOURCE_DIR}/ui/custom
-    ${PROJECT_SOURCE_DIR}/ui/generated
-    ${PROJECT_SOURCE_DIR}/ui/generated/guider_customer_fonts
+    ${PROJECT_SOURCE_DIR}/src/ui
+    # ${PROJECT_SOURCE_DIR}/ui/custom
+    # ${PROJECT_SOURCE_DIR}/ui/generated
+    # ${PROJECT_SOURCE_DIR}/ui/generated/guider_customer_fonts
 )
 
 # --- 宏定义 ---
@@ -59,14 +60,15 @@ add_compile_options(-Wno-psabi)
 aux_source_directory(${PROJECT_SOURCE_DIR}/lvgl8 SRCS)
 aux_source_directory(${PROJECT_SOURCE_DIR}/sys SRCS)
 aux_source_directory(${PROJECT_SOURCE_DIR}/common SRCS)
-aux_source_directory(${PROJECT_SOURCE_DIR}/ui/custom SRCS)
-aux_source_directory(${PROJECT_SOURCE_DIR}/ui/generated SRCS)
-aux_source_directory(${PROJECT_SOURCE_DIR}/ui/generated/guider_fonts SRCS)
-aux_source_directory(${PROJECT_SOURCE_DIR}/ui/generated/images SRCS)
+# aux_source_directory(${PROJECT_SOURCE_DIR}/ui/custom SRCS)
+# aux_source_directory(${PROJECT_SOURCE_DIR}/ui/generated SRCS)
+# aux_source_directory(${PROJECT_SOURCE_DIR}/ui/generated/guider_fonts SRCS)
+# aux_source_directory(${PROJECT_SOURCE_DIR}/ui/generated/images SRCS)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/hal SRCS)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/service SRCS)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/bridge SRCS)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/fonts SRCS)
+aux_source_directory(${PROJECT_SOURCE_DIR}/src/ui SRCS)
 
 # 只添加主程序文件
 list(APPEND SRCS ${PROJECT_SOURCE_DIR}/main.cpp)

@@ -1,0 +1,28 @@
+{
+  "files": [
+    "actions.h",
+    "eez-flow.cpp",
+    "eez-flow.h",
+    "fonts.h",
+    "images.c",
+    "images.h",
+    "screens.c",
+    "screens.h",
+    "structs.h",
+    "styles.c",
+    "styles.h",
+    "ui.c",
+    "ui.h",
+    "ui_image_camera.c",
+    "ui_image_cpu.c",
+    "ui_image_doubao.c",
+    "ui_image_image.c",
+    "ui_image_music.c",
+    "ui_image_sensor.c",
+    "ui_image_setting4.c",
+    "ui_image_video.c",
+    "ui_image_video2.c",
+    "ui_image_weather.c",
+    "vars.h"
+  ]
+}

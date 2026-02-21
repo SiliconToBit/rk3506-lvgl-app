@@ -9,16 +9,17 @@
 #include <lvgl/src/extra/libs/fsdrv/lv_fsdrv.h>
 #include "lv_port_init.h"
 
-#include "./ui/generated/events_init.h"
-#include "./ui/generated/gui_guider.h"
-#include "custom.h"
+// #include "./ui/generated/events_init.h"
+// #include "./ui/generated/gui_guider.h"
+// #include "custom.h"
+#include "ui.h"
 
 #include "AppBridge.h"
 #include "AppConfig.h"
 #include "DeviceService.h"
 #include "FontManager.h"
 
-lv_ui guider_ui;
+// lv_ui guider_ui;
 static int quit = 0;
 
 static void sigterm_handler(int sig)
@@ -100,15 +101,18 @@ int main(int argc, char **argv)
         std::cerr << "[Main] Background services init failed" << std::endl;
     }
 
-    setup_ui(&guider_ui);
-    custom_init(&guider_ui);
-    events_init(&guider_ui);
+    // setup_ui(&guider_ui);
+    // custom_init(&guider_ui);
+    // events_init(&guider_ui);
+
+    ui_init(); // 初始化UI
 
     /******************************结束******************************************/
     while (quit == 0)
     {
-        lv_task_handler();
-        usleep(100);
+        ui_tick(); // UI刷新
+        lv_task_handler(); // LVGL v8 用这个
+        usleep(1000); // 1ms，EEZ Studio 推荐的延时
     }
 
     background_services_deinit();
