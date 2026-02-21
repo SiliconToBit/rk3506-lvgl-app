@@ -1,8 +1,10 @@
 #include "DeviceService.h"
 #include "IRCommandManager.h"
+#include "IRDevice.h"
 #include <ctime>
 #include <iostream>
 #include <chrono>
+#include <vector>
 #include "nlohmann/json.hpp"
 
 using json = nlohmann::json;
@@ -43,6 +45,38 @@ void publishIrAck(MqttService *mqtt,
     };
     mqtt->publish(ackTopic, ack.dump());
 }
+
+std::vector<std::string> buildIrCommandCandidates(const std::string &cmd)
+{
+    if (cmd == "POWER_ON") return {"开", "开机", "电源", "开关"};
+    if (cmd == "POWER_OFF") return {"关", "关机", "电源", "开关"};
+    if (cmd == "TEMP_UP") return {"温度+", "升温", "加温", "温度上调"};
+    if (cmd == "TEMP_DOWN") return {"温度-", "降温", "减温", "温度下调"};
+    if (cmd == "MODE_COOL") return {"制冷", "模式-制冷", "冷风"};
+    if (cmd == "MODE_HEAT") return {"制热", "模式-制热", "暖风"};
+    return {};
+}
+
+std::string resolveIrCommandFromStore(const std::string &deviceName, const std::string &cmd)
+{
+    auto candidates = buildIrCommandCandidates(cmd);
+    for (const auto &candidate : candidates)
+    {
+        if (IRCommandManager::getInstance().commandExists(deviceName, candidate))
+        {
+            return candidate;
+        }
+    }
+
+    // 没有候选命中时，返回兼容旧逻辑的默认映射
+    if (cmd == "POWER_ON") return "开";
+    if (cmd == "POWER_OFF") return "关";
+    if (cmd == "TEMP_UP") return "升温";
+    if (cmd == "TEMP_DOWN") return "降温";
+    if (cmd == "MODE_COOL") return "制冷";
+    if (cmd == "MODE_HEAT") return "制热";
+    return "";
+}
 }
 
 /**
@@ -61,9 +95,9 @@ DeviceService& DeviceService::instance()
  * @details 初始化MQTT主题、上报间隔等默认配置
  */
 DeviceService::DeviceService()
-    : m_commandTopic("device/command")
-    , m_statusTopic("device/status")
-    , m_sensorTopic("sensor/data")
+    : m_commandTopic("rk3506/cmd")
+    , m_statusTopic("rk3506/status")
+    , m_sensorTopic("rk3506/sensor")
     , m_reportRunning(false)
     , m_reportInterval(30)
     , m_initialized(false)
@@ -93,6 +127,24 @@ bool DeviceService::init()
         handleMqttMessage(topic, payload);
     });
 
+    // 初始化红外设备单例（如果AppBridge已经打开，则跳过）
+    IRDevice& irDevice = IRDevice::getInstance();
+    if (!irDevice.isOpen())
+    {
+        if (irDevice.open())
+        {
+            std::cout << "[DeviceService] IR device opened" << std::endl;
+        }
+        else
+        {
+            std::cerr << "[DeviceService] Warning: Failed to open IR device" << std::endl;
+        }
+    }
+    else
+    {
+        std::cout << "[DeviceService] IR device already open (by AppBridge)" << std::endl;
+    }
+
     if (!IRCommandManager::getInstance().init("/data/ir_commands"))
     {
         if (!IRCommandManager::getInstance().init("/root/ir_commands"))
@@ -120,10 +172,14 @@ bool DeviceService::init()
  */
 void DeviceService::deinit()
 {
+    std::cout << "[DeviceService] deinit() starting..." << std::endl;
+
     m_reportRunning = false;
     if (m_reportThread.joinable())
     {
+        std::cout << "[DeviceService] Joining report thread..." << std::endl;
         m_reportThread.join();
+        std::cout << "[DeviceService] Report thread joined" << std::endl;
     }
 
     m_leds.clear();
@@ -131,8 +187,18 @@ void DeviceService::deinit()
     m_dht11s.clear();
     m_deviceInfos.clear();
     m_sensorDatas.clear();
+
+    std::cout << "[DeviceService] Deinit IRCommandManager..." << std::endl;
     IRCommandManager::getInstance().deinit();
+
+    std::cout << "[DeviceService] Closing IR device..." << std::endl;
+    IRDevice::getInstance().close();
+    std::cout << "[DeviceService] IR device closed" << std::endl;
+
+    std::cout << "[DeviceService] Resetting MQTT..." << std::endl;
     m_mqtt.reset();
+    std::cout << "[DeviceService] MQTT reset done" << std::endl;
+
     m_initialized = false;
     std::cout << "[DeviceService] Deinitialized" << std::endl;
 }
@@ -565,10 +631,10 @@ void DeviceService::reportSensorData()
 
         char payload[256];
         snprintf(payload, sizeof(payload),
-                 "{\"device\":\"%s\",\"temperature\":%d,\"humidity\":%d,\"timestamp\":%ld}",
-                 deviceId.c_str(), temp, humi, std::time(nullptr));
+                 "{\"temperature\":%d,\"humidity\":%d,\"timestamp\":%ld}",
+                 temp, humi, std::time(nullptr));
 
-        std::string topic = m_sensorTopic + "/" + deviceId;
+        std::string topic = m_sensorTopic + "/dht11";
         m_mqtt->publish(topic, payload);
 
         std::cout << "[DeviceService] Reported sensor data: " << deviceId
@@ -728,141 +794,162 @@ void DeviceService::setMqttStatusTopic(const std::string& topic)
  */
 void DeviceService::handleMqttMessage(const std::string& topic, const std::string& payload)
 {
-    if (topic != m_commandTopic)
+    std::cout << "[DeviceService] MQTT [" << topic << "]: " << payload << std::endl;
+
+    // LED 控制: rk3506/cmd/led01
+    if (topic == "rk3506/cmd/led01")
     {
+        if (payload == "ON")
+        {
+            setDeviceOn("led1");
+        }
+        else if (payload == "OFF")
+        {
+            setDeviceOff("led1");
+        }
         return;
     }
 
-    std::cout << "[DeviceService] MQTT command: " << payload << std::endl;
-
-    if (!payload.empty() && payload.front() == '{')
+    // 蜂鸣器控制: rk3506/cmd/buzzer01
+    if (topic == "rk3506/cmd/buzzer01")
     {
-        std::string deviceName;
-        std::string commandName;
-        std::string requestId;
-
-        try
+        if (payload == "ON")
         {
-            json cmd = json::parse(payload);
-            if (cmd.contains("request_id"))
-            {
-                const json &requestIdNode = cmd["request_id"];
-                if (requestIdNode.is_string())
-                {
-                    requestId = requestIdNode.get<std::string>();
-                }
-                else if (requestIdNode.is_number_integer())
-                {
-                    requestId = std::to_string(requestIdNode.get<long long>());
-                }
-                else if (requestIdNode.is_number_unsigned())
-                {
-                    requestId = std::to_string(requestIdNode.get<unsigned long long>());
-                }
-                else if (requestIdNode.is_number_float())
-                {
-                    requestId = std::to_string(requestIdNode.get<double>());
-                }
-            }
-
-            if (cmd.contains("device") && cmd["device"].is_string())
-            {
-                deviceName = cmd["device"].get<std::string>();
-            }
-
-            if (cmd.contains("command") && cmd["command"].is_string())
-            {
-                commandName = cmd["command"].get<std::string>();
-            }
+            buzzerOn("buzzer1");
         }
-        catch (const std::exception &)
+        else if (payload == "OFF")
         {
-            publishIrAck(m_mqtt.get(), m_commandTopic, requestId, deviceName, commandName,
-                         false, "invalid json command");
-            return;
+            buzzerOff("buzzer1");
         }
-
-        if (!deviceName.empty() && !commandName.empty())
+        else if (payload == "BEEP")
         {
-            const bool ok = IRCommandManager::getInstance().emitCommand(deviceName, commandName);
-            publishIrAck(m_mqtt.get(), m_commandTopic, requestId, deviceName, commandName,
-                         ok, ok ? "emit success" : "emit failed");
-            return;
+            buzzerBeep("buzzer1", 200);
         }
-
-        publishIrAck(m_mqtt.get(), m_commandTopic, requestId, deviceName, commandName,
-                     false, "invalid json command");
+        else if (payload == "ALARM")
+        {
+            buzzerBeepPattern("buzzer1", 100, 100, 3);
+        }
         return;
     }
 
-    if (payload == "led_on")
+    // 传感器控制: rk3506/cmd/sensor
+    if (topic == "rk3506/cmd/sensor")
     {
-        setDeviceOn("led1");
-    }
-    else if (payload == "led_off")
-    {
-        setDeviceOff("led1");
-    }
-    else if (payload == "led_toggle")
-    {
-        toggleDevice("led1");
-    }
-    else if (payload == "buzzer_on")
-    {
-        buzzerOn("buzzer1");
-    }
-    else if (payload == "buzzer_off")
-    {
-        buzzerOff("buzzer1");
-    }
-    else if (payload == "buzzer_beep")
-    {
-        buzzerBeep("buzzer1", 200);
-    }
-    else if (payload == "buzzer_alarm")
-    {
-        buzzerBeepPattern("buzzer1", 100, 100, 3);
-    }
-    else if (payload == "sensor_report")
-    {
-        reportSensorData();
-    }
-    else if (payload.find("set:") == 0)
-    {
-        size_t colonPos1 = payload.find(':', 4);
-        if (colonPos1 != std::string::npos)
+        if (payload == "DHT11_REPORT")
         {
-            std::string deviceId = payload.substr(4, colonPos1 - 4);
-            std::string action = payload.substr(colonPos1 + 1);
+            reportSensorData();
+        }
+        return;
+    }
 
-            if (action == "on")
-            {
-                if (m_leds.find(deviceId) != m_leds.end())
-                {
-                    setDeviceOn(deviceId);
-                }
-                else if (m_buzzers.find(deviceId) != m_buzzers.end())
-                {
-                    buzzerOn(deviceId);
-                }
-            }
-            else if (action == "off")
-            {
-                if (m_leds.find(deviceId) != m_leds.end())
-                {
-                    setDeviceOff(deviceId);
-                }
-                else if (m_buzzers.find(deviceId) != m_buzzers.end())
-                {
-                    buzzerOff(deviceId);
-                }
-            }
-            else if (action == "toggle")
-            {
-                toggleDevice(deviceId);
-            }
+    // 红外控制: rk3506/cmd/ir
+    if (topic == "rk3506/cmd/ir")
+    {
+        handleIrCommand(payload);
+        return;
+    }
+}
+
+void DeviceService::handleIrCommand(const std::string& payload)
+{
+    std::cout << "[IR] handleIrCommand: " << payload << std::endl;
+
+    if (payload.empty())
+    {
+        std::cout << "[IR] Error: empty payload" << std::endl;
+        publishIrAck(m_mqtt.get(), "rk3506/cmd/ir", "", "", "", false, "empty payload");
+        return;
+    }
+
+    if (payload.front() != '{')
+    {
+        std::cout << "[IR] Error: not json" << std::endl;
+        publishIrAck(m_mqtt.get(), "rk3506/cmd/ir", "", "", "", false, "invalid json");
+        return;
+    }
+
+    std::string deviceName;
+    std::string cmdName;
+
+    try
+    {
+        json cmd = json::parse(payload);
+
+        if (cmd.contains("device") && cmd["device"].is_string())
+        {
+            deviceName = cmd["device"].get<std::string>();
+        }
+
+        if (cmd.contains("cmd") && cmd["cmd"].is_string())
+        {
+            cmdName = cmd["cmd"].get<std::string>();
         }
     }
+    catch (const std::exception& e)
+    {
+        std::cout << "[IR] JSON parse error: " << e.what() << std::endl;
+        publishIrAck(m_mqtt.get(), "rk3506/cmd/ir", "", deviceName, cmdName, false, "json parse error");
+        return;
+    }
+
+    std::cout << "[IR] Parsed: device=" << deviceName << ", cmd=" << cmdName << std::endl;
+
+    if (deviceName.empty() || cmdName.empty())
+    {
+        std::cout << "[IR] Error: missing device or cmd" << std::endl;
+        publishIrAck(m_mqtt.get(), "rk3506/cmd/ir", "", deviceName, cmdName, false, "missing device or cmd");
+        return;
+    }
+
+    std::string mappedDeviceName = mapIrDevice(deviceName);
+    std::string irCommandName = resolveIrCommandFromStore(mappedDeviceName, cmdName);
+
+    std::cout << "[IR] Mapped: device=" << mappedDeviceName << ", cmd=" << irCommandName << std::endl;
+
+    if (irCommandName.empty())
+    {
+        std::cout << "[IR] Error: unknown cmd" << std::endl;
+        publishIrAck(m_mqtt.get(), "rk3506/cmd/ir", "", deviceName, cmdName, false, "unknown cmd");
+        return;
+    }
+
+    std::cout << "[IR] Emitting: " << mappedDeviceName << " -> " << irCommandName << std::endl;
+    bool ok = IRCommandManager::getInstance().emitCommand(mappedDeviceName, irCommandName);
+    std::cout << "[IR] Emit result: " << (ok ? "success" : "failed") << std::endl;
+    publishIrAck(m_mqtt.get(), "rk3506/cmd/ir", "", deviceName, cmdName, ok, ok ? "success" : "emit failed");
+}
+
+std::string DeviceService::mapIrDevice(const std::string& device)
+{
+    static const std::unordered_map<std::string, std::string> deviceMap = {
+        {"AC", "空调"},
+    };
+
+    auto it = deviceMap.find(device);
+    if (it != deviceMap.end())
+    {
+        return it->second;
+    }
+    return device;
+}
+
+std::string DeviceService::mapIrCommand(const std::string& cmd)
+{
+    static const std::unordered_map<std::string, std::string> cmdMap = {
+        {"POWER_ON", "开"},
+        {"POWER_OFF", "关"},
+        {"TEMP_UP", "升温"},
+        {"TEMP_DOWN", "降温"},
+        {"MODE_COOL", "制冷"},
+        {"MODE_HEAT", "制热"},
+    };
+
+    auto it = cmdMap.find(cmd);
+    if (it != cmdMap.end())
+    {
+        return it->second;
+    }
+    return "";
 }
 
 /**
@@ -878,7 +965,7 @@ void DeviceService::publishDeviceStatus(const std::string& deviceId, bool state)
     }
 
     std::string statusTopic = m_statusTopic + "/" + deviceId;
-    std::string payload = state ? "on" : "off";
+    std::string payload = state ? "ON" : "OFF";
 
     m_mqtt->publish(statusTopic, payload);
 }
@@ -891,7 +978,10 @@ void DeviceService::subscribeMqttTopics()
 {
     if (m_mqtt && m_mqtt->isConnected())
     {
-        m_mqtt->subscribe(m_commandTopic);
-        std::cout << "[DeviceService] Subscribed to: " << m_commandTopic << std::endl;
+        m_mqtt->subscribe("rk3506/cmd/led01");
+        m_mqtt->subscribe("rk3506/cmd/buzzer01");
+        m_mqtt->subscribe("rk3506/cmd/sensor");
+        m_mqtt->subscribe("rk3506/cmd/ir");
+        std::cout << "[DeviceService] Subscribed to rk3506/cmd/* topics" << std::endl;
     }
 }

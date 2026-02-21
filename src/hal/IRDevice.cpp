@@ -71,9 +71,16 @@ bool IRDevice::open()
         return false;
     }
 
-    m_running = true;
-    m_receiveThread = std::make_unique<std::thread>(&IRDevice::receiveLoop, this);
-    std::cout << "[IRDevice] 接收线程已启动" << std::endl;
+    // 禁用接收线程，避免与发射操作竞争
+    // 只在需要时直接调用 readFrame 读取应答
+    // m_running = true;
+    // m_receiveThread = std::make_unique<std::thread>(&IRDevice::receiveLoop, this);
+    // std::cout << "[IRDevice] 接收线程已启动" << std::endl;
+
+    // 清空串口缓冲区
+    tcflush(m_fd, TCIOFLUSH);
+
+    std::cout << "[IRDevice] 设备已打开（无接收线程）" << std::endl;
     return true;
 }
 
@@ -82,12 +89,18 @@ bool IRDevice::open()
  */
 void IRDevice::close()
 {
+    std::cout << "[IRDevice] close() called" << std::endl;
     m_running = false;
+    std::cout << "[IRDevice] m_running set to false" << std::endl;
+
     if (m_receiveThread && m_receiveThread->joinable())
     {
+        std::cout << "[IRDevice] Joining receive thread..." << std::endl;
         m_receiveThread->join();
+        std::cout << "[IRDevice] Receive thread joined" << std::endl;
     }
     m_receiveThread.reset();
+
     if (m_fd >= 0)
     {
         ::close(m_fd);
@@ -95,6 +108,7 @@ void IRDevice::close()
     }
     m_isLearning = false;
     m_learnStatus = IRLearnStatus::IDLE;
+    std::cout << "[IRDevice] close() done" << std::endl;
 }
 
 /**
@@ -263,7 +277,7 @@ bool IRDevice::writeFrame(const std::vector<uint8_t>& data)
 }
 
 /**
- * @brief 从串口读取帧数据
+ * @brief 从串口读取帧数据（单线程版本，无锁）
  * @param outData 输出数据
  * @param timeoutMs 超时时间(毫秒)
  * @return true 读取成功
@@ -271,8 +285,6 @@ bool IRDevice::writeFrame(const std::vector<uint8_t>& data)
  */
 bool IRDevice::readFrame(std::vector<uint8_t>& outData, int timeoutMs)
 {
-    std::lock_guard<std::mutex> lock(m_readMutex);
-
     if (m_fd < 0)
         return false;
 
@@ -282,21 +294,21 @@ bool IRDevice::readFrame(std::vector<uint8_t>& outData, int timeoutMs)
 
     while (true)
     {
+        // 检查是否已超时
         auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
                              std::chrono::steady_clock::now() - start)
                              .count();
         int remainingMs = timeoutMs - static_cast<int>(elapsedMs);
         if (remainingMs <= 0)
         {
-            if (m_isExtLearning && !m_rxPending.empty())
-            {
-                outData = m_rxPending;
-                m_rxPending.clear();
-                return true;
-            }
             return false;
         }
 
+        // 先检查缓冲区中是否已有完整帧
+        if (tryParseFrameFromBuffer(outData))
+            return true;
+
+        // 等待串口数据
         fd_set readfds;
         FD_ZERO(&readfds);
         FD_SET(m_fd, &readfds);
@@ -315,6 +327,7 @@ bool IRDevice::readFrame(std::vector<uint8_t>& outData, int timeoutMs)
         if (ret == 0)
             continue;
 
+        // 读取数据到临时缓冲区
         uint8_t temp[256];
         ssize_t bytesRead = read(m_fd, temp, sizeof(temp));
         if (bytesRead < 0)
@@ -326,54 +339,71 @@ bool IRDevice::readFrame(std::vector<uint8_t>& outData, int timeoutMs)
         if (bytesRead == 0)
             continue;
 
+        // 将数据加入接收缓冲区
         m_rxPending.insert(m_rxPending.end(), temp, temp + bytesRead);
 
-        if (!m_isExtLearning)
+        // 清理无效数据
+        while (!m_rxPending.empty() && m_rxPending.front() != IR_FRAME_HEAD)
         {
-            while (!m_rxPending.empty() && m_rxPending.front() != IR_FRAME_HEAD)
-            {
-                m_rxPending.erase(m_rxPending.begin());
-            }
-        }
-
-        while (m_rxPending.size() >= 3)
-        {
-            if (m_isExtLearning && m_rxPending.front() != IR_FRAME_HEAD)
-            {
-                break;
-            }
-
-            if (m_rxPending[0] != IR_FRAME_HEAD)
-            {
-                m_rxPending.erase(m_rxPending.begin());
-                continue;
-            }
-
-            uint16_t expectedLen = m_rxPending[1] | (static_cast<uint16_t>(m_rxPending[2]) << 8);
-            if (expectedLen < 7 || expectedLen > IR_MAX_CODE_LENGTH)
-            {
-                m_rxPending.erase(m_rxPending.begin());
-                continue;
-            }
-
-            if (m_rxPending.size() < expectedLen)
-                break;
-
-            if (m_rxPending[expectedLen - 1] == IR_FRAME_TAIL)
-            {
-                outData.assign(m_rxPending.begin(), m_rxPending.begin() + expectedLen);
-                m_rxPending.erase(m_rxPending.begin(), m_rxPending.begin() + expectedLen);
-                return true;
-            }
-
             m_rxPending.erase(m_rxPending.begin());
         }
 
-        if (m_rxPending.size() > IR_MAX_CODE_LENGTH)
+        // 尝试解析帧
+        if (tryParseFrameFromBuffer(outData))
+            return true;
+
+        // 防止缓冲区无限增长
+        if (m_rxPending.size() > IR_MAX_CODE_LENGTH * 2)
         {
             m_rxPending.clear();
         }
     }
+}
+
+bool IRDevice::tryParseFrameFromBuffer(std::vector<uint8_t>& outData)
+{
+    while (m_rxPending.size() >= 3)
+    {
+        // 外部学习模式下，允许非标准帧头
+        if (m_isExtLearning && m_rxPending.front() != IR_FRAME_HEAD)
+        {
+            // 外部学习时，如果数据量足够大，直接返回
+            if (m_rxPending.size() > 100)
+            {
+                outData = m_rxPending;
+                m_rxPending.clear();
+                return true;
+            }
+            break;
+        }
+
+        if (m_rxPending[0] != IR_FRAME_HEAD)
+        {
+            m_rxPending.erase(m_rxPending.begin());
+            continue;
+        }
+
+        uint16_t expectedLen = m_rxPending[1] | (static_cast<uint16_t>(m_rxPending[2]) << 8);
+        if (expectedLen < 7 || expectedLen > IR_MAX_CODE_LENGTH)
+        {
+            m_rxPending.erase(m_rxPending.begin());
+            continue;
+        }
+
+        if (m_rxPending.size() < expectedLen)
+            break;
+
+        if (m_rxPending[expectedLen - 1] == IR_FRAME_TAIL)
+        {
+            outData.assign(m_rxPending.begin(), m_rxPending.begin() + expectedLen);
+            m_rxPending.erase(m_rxPending.begin(), m_rxPending.begin() + expectedLen);
+            return true;
+        }
+
+        m_rxPending.erase(m_rxPending.begin());
+    }
+
+    return false;
 }
 
 /**
@@ -473,7 +503,9 @@ bool IRDevice::emitCode(uint8_t index)
         std::vector<uint8_t> respData;
         if (parseFrame(response, cmd, respData))
         {
-            if (cmd == IR_CMD_EMIT && respData.size() >= 2 && respData[1] == IR_ACK_SUCCESS)
+            const bool ackSuccess = (!respData.empty() && respData[0] == IR_ACK_SUCCESS) ||
+                                    (respData.size() >= 2 && respData[1] == IR_ACK_SUCCESS);
+            if (cmd == IR_CMD_EMIT && ackSuccess)
             {
                 return true;
             }
@@ -494,12 +526,17 @@ bool IRDevice::emitRawCode(const std::vector<uint8_t>& code)
     if (m_fd < 0 || code.empty())
         return false;
 
+    // 清空接收缓冲区
+    m_rxPending.clear();
+    tcflush(m_fd, TCIFLUSH);
+
     // 检查是否是完整的帧数据（以0x68开头，以0x16结尾）
     if (code.size() >= 4 && code[0] == IR_FRAME_HEAD && code.back() == IR_FRAME_TAIL)
     {
         // 直接发送完整帧
         std::cout << "[发射] 发送完整帧，长度: " << code.size() << std::endl;
-        return writeFrame(code);
+        if (!writeFrame(code))
+            return false;
     }
     else
     {
@@ -509,8 +546,60 @@ bool IRDevice::emitRawCode(const std::vector<uint8_t>& code)
 
         auto frame = buildFrame(IR_CMD_EXT_EMIT, code);
         std::cout << "[发射] 构建帧发送，数据长度: " << code.size() << std::endl;
-        return writeFrame(frame);
+        if (!writeFrame(frame))
+            return false;
     }
+
+    // 等待并读取模块应答：只对“短ACK帧”做判定，避免把回显/业务帧误判为失败
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(500);
+    while (std::chrono::steady_clock::now() < deadline)
+    {
+        int remainMs = static_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(
+            deadline - std::chrono::steady_clock::now()).count());
+        if (remainMs <= 0)
+        {
+            break;
+        }
+
+        std::vector<uint8_t> response;
+        if (!readFrame(response, remainMs))
+        {
+            break;
+        }
+
+        uint8_t cmd = 0;
+        std::vector<uint8_t> respData;
+        if (!parseFrame(response, cmd, respData))
+        {
+            continue;
+        }
+
+        // 常见ACK数据长度为1或2字节；更长数据一般是业务数据或串口回显
+        if (respData.size() > 2)
+        {
+            continue;
+        }
+
+        const bool ackSuccess = (!respData.empty() && respData[0] == IR_ACK_SUCCESS) ||
+                                (respData.size() >= 2 && respData[1] == IR_ACK_SUCCESS);
+        if (ackSuccess)
+        {
+            std::cout << "[发射] 模块应答成功" << std::endl;
+            return true;
+        }
+
+        const bool ackFail = (!respData.empty() && respData[0] == IR_ACK_FAIL) ||
+                             (respData.size() >= 2 && respData[1] == IR_ACK_FAIL);
+        if (ackFail)
+        {
+            std::cerr << "[发射] 模块应答失败" << std::endl;
+            return false;
+        }
+    }
+
+    // 超时也算成功，数据可能已经发送
+    std::cout << "[发射] 等待应答超时，假设发送成功" << std::endl;
+    return true;
 }
 
 /**
@@ -537,7 +626,9 @@ bool IRDevice::clearCode(uint8_t index)
         std::vector<uint8_t> respData;
         if (parseFrame(response, cmd, respData))
         {
-            if (cmd == IR_CMD_CLEAR && respData.size() >= 2 && respData[1] == IR_ACK_SUCCESS)
+            const bool ackSuccess = (!respData.empty() && respData[0] == IR_ACK_SUCCESS) ||
+                                    (respData.size() >= 2 && respData[1] == IR_ACK_SUCCESS);
+            if (cmd == IR_CMD_CLEAR && ackSuccess)
             {
                 return true;
             }
@@ -570,7 +661,9 @@ bool IRDevice::clearAllCodes()
         std::vector<uint8_t> respData;
         if (parseFrame(response, cmd, respData))
         {
-            if (cmd == IR_CMD_CLEAR_ALL && respData.size() >= 2 && respData[1] == IR_ACK_SUCCESS)
+            const bool ackSuccess = (!respData.empty() && respData[0] == IR_ACK_SUCCESS) ||
+                                    (respData.size() >= 2 && respData[1] == IR_ACK_SUCCESS);
+            if (cmd == IR_CMD_CLEAR_ALL && ackSuccess)
             {
                 return true;
             }
@@ -610,113 +703,57 @@ void IRDevice::receiveLoop()
 
     while (m_running)
     {
-        if (readFrame(frame, m_isExtLearning ? 300 : 100))
+        // 使用短超时，确保能及时响应 m_running = false
+        if (readFrame(frame, 50))
         {
-            std::cout << "[接收线程] 协议帧: ";
-            for (auto b : frame)
-            {
-                std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)b << " ";
-            }
-            std::cout << std::dec << std::endl;
-
-            uint8_t cmd;
+            // 只在学习模式下或收到特定命令时打印日志
+            uint8_t cmd = 0;
             std::vector<uint8_t> data;
-            if (parseFrame(frame, cmd, data))
+            bool parsed = parseFrame(frame, cmd, data);
+
+            // 处理学习完成上报
+            if (parsed && cmd == IR_ACK_LEARN_COMPLETE && m_isLearning)
             {
-                std::cout << "[解析] 命令码: 0x" << std::hex << (int)cmd 
-                          << ", 数据长度: " << std::dec << data.size() << std::endl;
-
-                // 处理学习完成上报 (命令码 0x02)
-                if (cmd == IR_ACK_LEARN_COMPLETE && m_isLearning)
-                {
-                    m_isLearning = false;
-                    m_learnStatus = IRLearnStatus::SUCCESS;
-
-                    if (data.size() >= 1)
-                    {
-                        m_lastLearnedCode.index = data[0];
-                        if (data.size() > 1)
-                        {
-                            m_lastLearnedCode.data.assign(data.begin() + 1, data.end());
-                        }
-                    }
-
-                    if (m_onStatusChange)
-                    {
-                        m_onStatusChange(m_learnStatus);
-                    }
-
-                    if (m_onLearnComplete)
-                    {
-                        m_onLearnComplete(m_lastLearnedCode);
-                    }
-                }
-                // 处理外部学习上报
-                // 外部学习流程：
-                // 1. 发送 AFN=20H 进入外部学习模式
-                // 2. 模块回复应答帧 AFN=01H（确认进入学习模式，绿灯亮）
-                // 3. 用户按下遥控器后，模块主动发送 AFN=22H 的数据帧
-                else if (m_isExtLearning)
-                {
-                    std::cout << "[外部学习] 收到帧，cmd=0x" << std::hex << (int)cmd << std::dec << std::endl;
-                    
-                    // AFN=22H 是外部学习的数据帧，包含红外码数据
-                    if (cmd == IR_CMD_EXT_EMIT)
-                    {
-                        std::cout << "[外部学习] 收到红外码数据，长度: " << data.size() << std::endl;
-                        
-                        m_isExtLearning = false;
-                        m_learnStatus = IRLearnStatus::SUCCESS;
-
-                        if (m_onStatusChange)
-                        {
-                            m_onStatusChange(m_learnStatus);
-                        }
-
-                        if (m_onExtLearnComplete)
-                        {
-                            // 保存整个帧数据（用于后续发射）
-                            m_onExtLearnComplete(frame);
-                        }
-                    }
-                    // AFN=01H 是成功应答，表示模块已进入外部学习模式
-                    else if (cmd == IR_ACK_SUCCESS)
-                    {
-                        std::cout << "[外部学习] 模块已进入学习模式（绿灯亮），请按下遥控器..." << std::endl;
-                        // 继续等待遥控器信号
-                    }
-                    // AFN=20H 是进入外部学习模式的应答（备用）
-                    else if (cmd == IR_CMD_EXT_LEARN)
-                    {
-                        std::cout << "[外部学习] 模块已进入学习模式，等待遥控器信号..." << std::endl;
-                        // 继续等待，不改变状态
-                    }
-                    else
-                    {
-                        std::cout << "[外部学习] 收到其他命令码: 0x" << std::hex << (int)cmd << std::dec << std::endl;
-                    }
-                }
-            }
-            else if (m_isExtLearning && !frame.empty())
-            {
-                std::cout << "[外部学习] 收到原始波形数据，长度: " << frame.size() << std::endl;
-
-                m_isExtLearning = false;
+                std::cout << "[IR] 学习完成" << std::endl;
+                m_isLearning = false;
                 m_learnStatus = IRLearnStatus::SUCCESS;
 
-                if (m_onStatusChange)
+                if (data.size() >= 1)
                 {
-                    m_onStatusChange(m_learnStatus);
+                    m_lastLearnedCode.index = data[0];
+                    if (data.size() > 1)
+                    {
+                        m_lastLearnedCode.data.assign(data.begin() + 1, data.end());
+                    }
                 }
 
-                if (m_onExtLearnComplete)
+                if (m_onStatusChange) m_onStatusChange(m_learnStatus);
+                if (m_onLearnComplete) m_onLearnComplete(m_lastLearnedCode);
+            }
+            // 处理外部学习上报
+            else if (m_isExtLearning)
+            {
+                if (parsed && cmd == IR_CMD_EXT_EMIT)
                 {
-                    m_onExtLearnComplete(frame);
+                    std::cout << "[IR] 外部学习完成，数据长度: " << data.size() << std::endl;
+                    m_isExtLearning = false;
+                    m_learnStatus = IRLearnStatus::SUCCESS;
+
+                    if (m_onStatusChange) m_onStatusChange(m_learnStatus);
+                    if (m_onExtLearnComplete) m_onExtLearnComplete(frame);
+                }
+                else if (parsed && cmd == IR_ACK_SUCCESS)
+                {
+                    // 模块应答，忽略
                 }
             }
+            // 其他情况（如发射后的应答）直接忽略，不打印日志
+            
             frame.clear();
         }
     }
+
+    std::cout << "[IRDevice] 接收线程已停止" << std::endl;
 }
 
 /**

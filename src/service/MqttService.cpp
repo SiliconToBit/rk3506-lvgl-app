@@ -4,6 +4,11 @@
 #include <iostream>
 #include <thread>
 
+namespace
+{
+constexpr std::chrono::seconds kMqttWaitTimeout(3);
+}
+
 /**
  * @brief MQTT回调类
  * @details 继承mqtt::callback,处理连接状态变化和消息到达事件
@@ -53,10 +58,7 @@ public:
      */
     void message_arrived(mqtt::const_message_ptr msg) override
     {
-        if (m_service->m_messageCallback)
-        {
-            m_service->m_messageCallback(msg->get_topic(), msg->get_payload());
-        }
+        m_service->enqueueMessage(msg->get_topic(), msg->get_payload());
     }
 
     /**
@@ -77,6 +79,7 @@ MqttService::MqttService()
     : m_connected(false)
     , m_autoReconnect(true)
     , m_reconnectInterval(5)
+    , m_messageRunning(false)
 {
 }
 
@@ -113,13 +116,18 @@ bool MqttService::connect(const std::string& host, int port, const std::string& 
 
         m_callback = std::make_unique<MqttCallback>(this);
         m_client->set_callback(*m_callback);
+        startMessageWorker();
 
         std::cout << "[MQTT] Connecting to " << m_serverAddress << "..." << std::endl;
 
         auto token = m_client->connect(*m_connOpts);
-        token->wait();
+        if (!token->wait_for(kMqttWaitTimeout))
+        {
+            std::cerr << "[MQTT] Connect timeout" << std::endl;
+            return false;
+        }
 
-        m_connected = true;
+        m_connected = m_client->is_connected();
         return true;
     }
     catch (const mqtt::exception& e)
@@ -136,13 +144,21 @@ bool MqttService::connect(const std::string& host, int port, const std::string& 
  */
 void MqttService::disconnect()
 {
+    std::cout << "[MQTT] disconnect() called, connected=" << m_connected << std::endl;
     if (m_client && m_connected)
     {
         try
         {
+            std::cout << "[MQTT] Calling client->disconnect()..." << std::endl;
             auto token = m_client->disconnect();
-            token->wait();
-            std::cout << "[MQTT] Disconnected" << std::endl;
+            if (token->wait_for(kMqttWaitTimeout))
+            {
+                std::cout << "[MQTT] Disconnected" << std::endl;
+            }
+            else
+            {
+                std::cerr << "[MQTT] Disconnect timeout" << std::endl;
+            }
         }
         catch (const mqtt::exception& e)
         {
@@ -150,6 +166,8 @@ void MqttService::disconnect()
         }
     }
     m_connected = false;
+    stopMessageWorker();
+    std::cout << "[MQTT] disconnect() done" << std::endl;
 }
 
 /**
@@ -180,7 +198,11 @@ bool MqttService::subscribe(const std::string& topic, int qos)
     try
     {
         auto token = m_client->subscribe(topic, qos);
-        token->wait();
+        if (!token->wait_for(kMqttWaitTimeout))
+        {
+            std::cerr << "[MQTT] Subscribe timeout: " << topic << std::endl;
+            return false;
+        }
         std::cout << "[MQTT] Subscribed to: " << topic << std::endl;
         return true;
     }
@@ -207,7 +229,11 @@ bool MqttService::unsubscribe(const std::string& topic)
     try
     {
         auto token = m_client->unsubscribe(topic);
-        token->wait();
+        if (!token->wait_for(kMqttWaitTimeout))
+        {
+            std::cerr << "[MQTT] Unsubscribe timeout: " << topic << std::endl;
+            return false;
+        }
         std::cout << "[MQTT] Unsubscribed from: " << topic << std::endl;
         return true;
     }
@@ -254,7 +280,11 @@ bool MqttService::publish(const std::string& topic, const void* data, size_t siz
     {
         mqtt::message_ptr msg = mqtt::make_message(topic, data, size, qos, retained);
         auto token = m_client->publish(msg);
-        token->wait();
+        if (!token->wait_for(kMqttWaitTimeout))
+        {
+            std::cerr << "[MQTT] Publish timeout: " << topic << std::endl;
+            return false;
+        }
         return true;
     }
     catch (const mqtt::exception& e)
@@ -308,13 +338,87 @@ bool MqttService::tryReconnect()
     try
     {
         auto token = m_client->connect(*m_connOpts);
-        token->wait();
-        m_connected = true;
+        if (!token->wait_for(kMqttWaitTimeout))
+        {
+            std::cerr << "[MQTT] Reconnect timeout" << std::endl;
+            return false;
+        }
+        m_connected = m_client->is_connected();
         return true;
     }
     catch (const mqtt::exception& e)
     {
         std::cerr << "[MQTT] Reconnect failed: " << e.what() << std::endl;
         return false;
+    }
+}
+
+void MqttService::enqueueMessage(std::string topic, std::string payload)
+{
+    std::lock_guard<std::mutex> lock(m_messageMutex);
+    if (!m_messageRunning)
+    {
+        return;
+    }
+
+    m_messageQueue.emplace(std::move(topic), std::move(payload));
+    m_messageCv.notify_one();
+}
+
+void MqttService::startMessageWorker()
+{
+    stopMessageWorker();
+
+    {
+        std::lock_guard<std::mutex> lock(m_messageMutex);
+        m_messageRunning = true;
+    }
+
+    m_messageThread = std::thread(&MqttService::messageWorkerLoop, this);
+}
+
+void MqttService::stopMessageWorker()
+{
+    {
+        std::lock_guard<std::mutex> lock(m_messageMutex);
+        m_messageRunning = false;
+    }
+    m_messageCv.notify_all();
+
+    if (m_messageThread.joinable())
+    {
+        m_messageThread.join();
+    }
+
+    std::lock_guard<std::mutex> lock(m_messageMutex);
+    std::queue<std::pair<std::string, std::string>> empty;
+    m_messageQueue.swap(empty);
+}
+
+void MqttService::messageWorkerLoop()
+{
+    while (true)
+    {
+        std::pair<std::string, std::string> message;
+        {
+            std::unique_lock<std::mutex> lock(m_messageMutex);
+            m_messageCv.wait(lock, [this]() {
+                return !m_messageRunning || !m_messageQueue.empty();
+            });
+
+            if (!m_messageRunning && m_messageQueue.empty())
+            {
+                break;
+            }
+
+            message = std::move(m_messageQueue.front());
+            m_messageQueue.pop();
+        }
+
+        auto callback = m_messageCallback;
+        if (callback)
+        {
+            callback(message.first, message.second);
+        }
     }
 }

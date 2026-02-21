@@ -98,6 +98,7 @@ class IRDevice
     std::vector<uint8_t> buildFrame(uint8_t cmd, const std::vector<uint8_t>& data);
     bool parseFrame(const std::vector<uint8_t>& frame, uint8_t& cmd, std::vector<uint8_t>& data);
     uint8_t calcChecksum(const std::vector<uint8_t>& data, size_t start, size_t len);
+    bool tryParseFrameFromBuffer(std::vector<uint8_t>& outData); // 从缓冲区解析帧
 
     // 接收线程
     bool m_running;

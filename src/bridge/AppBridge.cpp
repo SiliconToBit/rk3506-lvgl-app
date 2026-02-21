@@ -56,11 +56,11 @@ int bridge_init(void)
         return -1;
     }
 
-    // 初始化红外学习模块（用于Home Assistant远程控制）
-    s_irDevice = new (std::nothrow) IRDevice(APP_DEV_IR);
-    if (s_irDevice && s_irDevice->open())
+    // 初始化红外学习模块（使用单例，与DeviceService共享）
+    s_irDevice = &IRDevice::getInstance();
+    if (s_irDevice->open())
     {
-        std::cout << "[Bridge] IR device initialized: " << APP_DEV_IR << std::endl;
+        std::cout << "[Bridge] IR device initialized (singleton): " << APP_DEV_IR << std::endl;
 
         // 设置回调
         s_irDevice->setOnLearnComplete([](const IRCode &code) {
@@ -79,9 +79,7 @@ int bridge_init(void)
     }
     else
     {
-        std::cerr << "[Bridge] Warning: Failed to init IR device (optional)" << std::endl;
-        delete s_irDevice;
-        s_irDevice = nullptr;
+        std::cerr << "[Bridge] Warning: Failed to init IR device (optional), isOpen=" << s_irDevice->isOpen() << std::endl;
         // 红外模块失败不影响整体初始化
     }
 
@@ -95,7 +93,7 @@ int bridge_init(void)
  */
 void bridge_deinit(void)
 {
-    delete s_irDevice;
+    // s_irDevice 是单例，不要 delete，由 DeviceService 关闭
     s_irDevice = nullptr;
 
     delete s_weatherService;

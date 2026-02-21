@@ -8,9 +8,13 @@
 #define LVGL_APP_SERVICE_MQTT_SERVICE_H
 
 #include "mqtt/async_client.h"
+#include <condition_variable>
 #include <functional>
 #include <memory>
+#include <mutex>
+#include <queue>
 #include <string>
+#include <thread>
 class MqttService
 {
 public:
@@ -41,6 +45,11 @@ private:
     class MqttCallback;
     friend class MqttCallback;
 
+    void enqueueMessage(std::string topic, std::string payload);
+    void startMessageWorker();
+    void stopMessageWorker();
+    void messageWorkerLoop();
+
     bool tryReconnect();
 
     std::unique_ptr<mqtt::async_client> m_client;
@@ -51,6 +60,12 @@ private:
     bool m_connected;
     bool m_autoReconnect;
     int m_reconnectInterval;
+
+    std::thread m_messageThread;
+    std::mutex m_messageMutex;
+    std::condition_variable m_messageCv;
+    std::queue<std::pair<std::string, std::string>> m_messageQueue;
+    bool m_messageRunning;
 };
 
 #endif

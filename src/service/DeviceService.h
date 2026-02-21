@@ -17,6 +17,7 @@
 #include <string>
 #include <thread>
 #include <atomic>
+#include <unordered_map>
 
 struct DeviceInfo
 {
@@ -85,6 +86,9 @@ private:
     ~DeviceService();
 
     void handleMqttMessage(const std::string& topic, const std::string& payload);
+    void handleIrCommand(const std::string& payload);
+    std::string mapIrDevice(const std::string& device);
+    std::string mapIrCommand(const std::string& cmd);
     void publishDeviceStatus(const std::string& deviceId, bool state);
     void subscribeMqttTopics();
     void sensorReportThread();

@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <cerrno>
+#include <iostream>
 
 namespace
 {
@@ -176,12 +177,24 @@ std::vector<uint8_t> IRCommandManager::getCommand(const std::string &deviceName,
 
 bool IRCommandManager::emitCommand(const std::string &deviceName, const std::string &commandName)
 {
+    std::cout << "[IRCmdMgr] emitCommand: " << deviceName << " -> " << commandName << std::endl;
+
     auto data = getCommand(deviceName, commandName);
+    std::cout << "[IRCmdMgr] data size: " << data.size() << std::endl;
+
     if (data.empty())
+    {
+        std::cout << "[IRCmdMgr] Error: command data is empty" << std::endl;
         return false;
+    }
 
     IRDevice &ir = IRDevice::getInstance();
-    return ir.emitRawCode(data);
+    std::cout << "[IRCmdMgr] IRDevice isOpen: " << (ir.isOpen() ? "yes" : "no") << std::endl;
+
+    bool result = ir.emitRawCode(data);
+    std::cout << "[IRCmdMgr] emitRawCode result: " << (result ? "success" : "failed") << std::endl;
+
+    return result;
 }
 
 std::vector<std::string> IRCommandManager::getDeviceList()

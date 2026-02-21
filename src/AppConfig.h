@@ -19,7 +19,7 @@
 #define APP_GPIO_BUZZER "/dev/buzzer"
 
 /* ======================== MQTT 配置 =========================== */
-#define APP_MQTT_HOST "192.168.1.100"
+#define APP_MQTT_HOST "192.168.1.87"
 #define APP_MQTT_PORT 1883
 #define APP_MQTT_CLIENT_ID "rk3506_device"
 
