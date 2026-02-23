@@ -255,28 +255,53 @@ bool WeatherService::fetchData()
         return true; // 实时天气获取成功，预报失败也算部分成功
     }
 
-    // 解析预报数据
+    // 解析预报数据 - 从daily数组中解析
     m_forecast.clear();
 
     const char* dayNames[] = {"今天", "明天", "后天"};
 
-    for (int i = 0; i < 3; i++)
+    // 查找daily数组
+    size_t dailyPos = forecastResponse.find("\"daily\"");
+    if (dailyPos == std::string::npos)
     {
-        std::string dayKey = "\"day" + std::to_string(i) + "\"";
-        size_t dayPos = forecastResponse.find(dayKey);
-        if (dayPos == std::string::npos)
-            continue;
+        return true; // 没有daily字段，但实时天气已成功
+    }
 
-        std::string daySection = forecastResponse.substr(dayPos, 400);
+    // 提取daily数组内容
+    size_t arrayStart = forecastResponse.find("[", dailyPos);
+    size_t arrayEnd = forecastResponse.find("]", arrayStart);
+    if (arrayStart == std::string::npos || arrayEnd == std::string::npos)
+    {
+        return true;
+    }
+
+    std::string dailyArray = forecastResponse.substr(arrayStart, arrayEnd - arrayStart + 1);
+
+    // 解析每一天的数据
+    size_t pos = 0;
+    int dayCount = 0;
+    while (pos < dailyArray.length() && dayCount < 3)
+    {
+        size_t objStart = dailyArray.find("{", pos);
+        if (objStart == std::string::npos)
+            break;
+
+        size_t objEnd = dailyArray.find("}", objStart);
+        if (objEnd == std::string::npos)
+            break;
+
+        std::string dayObj = dailyArray.substr(objStart, objEnd - objStart + 1);
 
         ForecastWeather fc;
-        fc.date = dayNames[i];
-        fc.iconCode = parseJsonInt(daySection, "iconDay");
-        fc.tempMin = parseJsonInt(daySection, "tempMin");
-        fc.tempMax = parseJsonInt(daySection, "tempMax");
-        fc.windDir = parseJsonString(daySection, "windDirDay");
+        fc.date = dayNames[dayCount];
+        fc.iconCode = parseJsonInt(dayObj, "iconDay");
+        fc.tempMin = parseJsonInt(dayObj, "tempMin");
+        fc.tempMax = parseJsonInt(dayObj, "tempMax");
+        fc.windDir = parseJsonString(dayObj, "windDirDay");
 
         m_forecast.push_back(fc);
+        dayCount++;
+        pos = objEnd + 1;
     }
 
     return true;

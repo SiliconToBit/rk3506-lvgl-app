@@ -71,13 +71,13 @@ typedef struct _objects_t {
     lv_obj_t *weather_city_label;
     lv_obj_t *weather_forecast_panel;
     lv_obj_t *weather_fcst_icon_0_label;
-    lv_obj_t *weather_fcst_icon_1_label;
-    lv_obj_t *weather_fcst_icon_2_label;
     lv_obj_t *weather_fcst_temp_0_label;
-    lv_obj_t *weather_fcst_temp_1_label;
-    lv_obj_t *weather_fcst_temp_2_label;
     lv_obj_t *weather_fcst_wind_0_label;
+    lv_obj_t *weather_fcst_icon_1_label;
+    lv_obj_t *weather_fcst_temp_1_label;
     lv_obj_t *weather_fcst_wind_1_label;
+    lv_obj_t *weather_fcst_icon_2_label;
+    lv_obj_t *weather_fcst_temp_2_label;
     lv_obj_t *weather_fcst_wind_2_label;
     lv_obj_t *sys_calendar;
     lv_obj_t *weather_city_picker_mask;

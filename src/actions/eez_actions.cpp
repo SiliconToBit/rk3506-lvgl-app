@@ -16,11 +16,13 @@
 namespace
 {
     // 全局变量
-    std::string g_music_cover_path;         // 当前音乐封面路径
-    std::string g_last_song_title;          // 上一首歌曲标题（用于检测歌曲切换）
-    lv_timer_t* g_music_ui_timer = nullptr; // 音乐界面UI刷新定时器
-    bool g_slider_syncing = false;          // 标记是否正在同步滑块值（防止事件循环）
-    std::vector<lv_obj_t*> g_song_buttons;  // 歌曲列表按钮容器
+    std::string g_music_cover_path;             // 当前音乐封面路径
+    std::string g_last_song_title;              // 上一首歌曲标题（用于检测歌曲切换）
+    lv_timer_t* g_music_ui_timer = nullptr;     // 音乐界面UI刷新定时器
+    lv_timer_t* g_weather_time_timer = nullptr; // 天气界面时间刷新定时器
+    bool g_slider_syncing = false;              // 标记是否正在同步滑块值（防止事件循环）
+    std::vector<lv_obj_t*> g_song_buttons;      // 歌曲列表按钮容器
+    int g_last_minute = -1;                     // 上次更新的分钟数，用于检测分钟变化
 
     // 前置声明
     void refresh_music_page_ui();
@@ -723,6 +725,29 @@ extern "C" void action_confirm_city_picker(lv_event_t* e)
 }
 
 /**
+ * @brief 天气界面时间刷新定时器回调
+ * @param timer LVGL定时器对象
+ * @details 每秒检查一次，只在分钟变化时更新显示，确保时间同步准确
+ */
+static void weather_time_timer_cb(lv_timer_t* timer)
+{
+    TimeService& timeService = TimeService::getInstance();
+    DateTime dt = timeService.getCurrentDateTime();
+
+    // 只在分钟变化时更新显示
+    if (dt.minute != g_last_minute)
+    {
+        g_last_minute = dt.minute;
+
+        if (objects.weather_time_label)
+        {
+            std::string timeStr = timeService.getTimeString();
+            lv_label_set_text(objects.weather_time_label, timeStr.c_str());
+        }
+    }
+}
+
+/**
  * @brief 初始化天气界面
  * @param e LVGL事件对象
  * @details 直接使用 WeatherService C++ 接口获取天气数据并显示
@@ -742,10 +767,27 @@ extern "C" void action_init_weather_screen(lv_event_t* e)
 
     // 显示天气数据
     refresh_weather_ui();
+
+    // 创建时间刷新定时器（每秒检查一次，但只在分钟变化时更新显示）
+    if (g_weather_time_timer == nullptr)
+    {
+        // 初始化当前分钟数，确保第一次能正确显示
+        DateTime dt = timeService.getCurrentDateTime();
+        g_last_minute = dt.minute;
+        g_weather_time_timer = lv_timer_create(weather_time_timer_cb, 1000, nullptr);
+    }
 }
 
 /**
  * @brief 反初始化天气界面
  * @param e LVGL事件对象
  */
-extern "C" void action_deinit_weather_screen(lv_event_t* e) {}
+extern "C" void action_deinit_weather_screen(lv_event_t* e)
+{
+    // 删除时间刷新定时器
+    if (g_weather_time_timer)
+    {
+        lv_timer_del(g_weather_time_timer);
+        g_weather_time_timer = nullptr;
+    }
+}

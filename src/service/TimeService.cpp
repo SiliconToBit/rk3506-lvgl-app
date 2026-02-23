@@ -19,39 +19,35 @@ TimeService& TimeService::getInstance()
     return instance;
 }
 
-TimeService::TimeService() : m_ntpServer("ntp.aliyun.com"), m_initialized(false)
-{
-    std::cout << "[TimeService] Created" << std::endl;
-}
+TimeService::TimeService() : m_ntpServer("ntp.aliyun.com"), m_initialized(false) {}
 
-TimeService::~TimeService()
-{
-    std::cout << "[TimeService] Destroyed" << std::endl;
-}
+TimeService::~TimeService() {}
 
 void TimeService::init(const std::string& ntpServer)
 {
     m_ntpServer = ntpServer;
     m_initialized = true;
-    std::cout << "[TimeService] Initialized with NTP server: " << ntpServer << std::endl;
 }
 
 bool TimeService::syncTime()
 {
-    std::cout << "[TimeService] Syncing time from " << m_ntpServer << std::endl;
-
-    // 使用 ntpdate 同步时间
-    std::string cmd = "ntpdate -u " + m_ntpServer + " > /dev/null 2>&1";
+    // 使用 chronyc 同步时间
+    std::string cmd = "chronyc -a makestep > /dev/null 2>&1";
     int ret = system(cmd.c_str());
 
     if (ret == 0)
     {
-        std::cout << "[TimeService] Time synced successfully" << std::endl;
         return true;
     }
     else
     {
-        std::cerr << "[TimeService] Failed to sync time, using local time" << std::endl;
+        // 如果 chronyc 失败，尝试使用 ntpdate
+        cmd = "ntpdate -u " + m_ntpServer + " > /dev/null 2>&1";
+        ret = system(cmd.c_str());
+        if (ret == 0)
+        {
+            return true;
+        }
         return false;
     }
 }

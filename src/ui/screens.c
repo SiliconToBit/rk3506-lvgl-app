@@ -13,7 +13,7 @@
 objects_t objects;
 
 static const char *screen_names[] = { "Main", "P1", "P2", "MusicPage", "WeatherPage", "SensorPage", "SettingPage", "CpuPage", "ImagePage", "VideoPage", "CameraPage" };
-static const char *object_names[] = { "main", "p1", "p2", "music_page", "weather_page", "sensor_page", "setting_page", "cpu_page", "image_page", "video_page", "camera_page", "setting_btn", "weather_btn", "sensor_btn", "music_btn", "image_btn", "cpu_btn", "video_btn", "camera_btn", "ai_btn", "obj0", "obj1", "obj2", "music_album_img", "music_volume_slider", "music_progress_slider", "music_curr_time_label", "music_total_time_label", "music_title_label", "music_lyrics_label", "music_play_pause_imgbtn", "music_list_panel", "scroll_list_area", "obj3", "weather_time_panel", "weather_temp_label", "weather_wind_label", "weather_text_label", "weather_icon_label", "time_location_panel", "weather_time_label", "weather_data_label", "weather_city_label", "weather_forecast_panel", "weather_fcst_icon_0_label", "weather_fcst_icon_1_label", "weather_fcst_icon_2_label", "weather_fcst_temp_0_label", "weather_fcst_temp_1_label", "weather_fcst_temp_2_label", "weather_fcst_wind_0_label", "weather_fcst_wind_1_label", "weather_fcst_wind_2_label", "sys_calendar", "weather_city_picker_mask", "obj4", "obj5", "weather_prov_roller", "weather_city_roller", "weather_county_roller", "led0_btn", "led1_btn", "rgb_led_btn", "buzzer_btn", "dht11_temp_label", "dht11_humi_label", "mpu6050_temp_label", "mpu6050_pitch_label", "mpu6050_roll_label", "mpu6050_yaw_label" };
+static const char *object_names[] = { "main", "p1", "p2", "music_page", "weather_page", "sensor_page", "setting_page", "cpu_page", "image_page", "video_page", "camera_page", "setting_btn", "weather_btn", "sensor_btn", "music_btn", "image_btn", "cpu_btn", "video_btn", "camera_btn", "ai_btn", "obj0", "obj1", "obj2", "music_album_img", "music_volume_slider", "music_progress_slider", "music_curr_time_label", "music_total_time_label", "music_title_label", "music_lyrics_label", "music_play_pause_imgbtn", "music_list_panel", "scroll_list_area", "obj3", "weather_time_panel", "weather_temp_label", "weather_wind_label", "weather_text_label", "weather_icon_label", "time_location_panel", "weather_time_label", "weather_data_label", "weather_city_label", "weather_forecast_panel", "weather_fcst_icon_0_label", "weather_fcst_temp_0_label", "weather_fcst_wind_0_label", "weather_fcst_icon_1_label", "weather_fcst_temp_1_label", "weather_fcst_wind_1_label", "weather_fcst_icon_2_label", "weather_fcst_temp_2_label", "weather_fcst_wind_2_label", "sys_calendar", "weather_city_picker_mask", "obj4", "obj5", "weather_prov_roller", "weather_city_roller", "weather_county_roller", "led0_btn", "led1_btn", "rgb_led_btn", "buzzer_btn", "dht11_temp_label", "dht11_humi_label", "mpu6050_temp_label", "mpu6050_pitch_label", "mpu6050_roll_label", "mpu6050_yaw_label" };
 
 //
 // Event handlers
@@ -290,7 +290,7 @@ static void event_handler_cb_weather_page_obj4(lv_event_t *e) {
     
     if (event == LV_EVENT_CLICKED) {
         e->user_data = (void *)0;
-        flowPropagateValueLVGLEvent(flowState, 30, 0, e);
+        flowPropagateValueLVGLEvent(flowState, 32, 0, e);
     }
 }
 
@@ -912,15 +912,15 @@ void create_screen_weather_page() {
                 lv_obj_t *parent_obj = obj;
                 {
                     lv_obj_t *obj = lv_label_create(parent_obj);
-                    lv_obj_set_pos(obj, 114, 327);
+                    lv_obj_set_pos(obj, -16, -15);
                     lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-                    lv_obj_set_style_text_font(obj, ui_font_qweather_icons_32, LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_label_set_text(obj, "");
+                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_label_set_text(obj, "3日天气预报");
                 }
                 {
                     lv_obj_t *obj = lv_line_create(parent_obj);
-                    lv_obj_set_pos(obj, -22, 29);
-                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                    lv_obj_set_pos(obj, -21, 30);
+                    lv_obj_set_size(obj, LV_PCT(100), LV_PCT(1));
                     static lv_point_t line_points[] = {
                         { 0, 0 },
                         { 400, 0 }
@@ -928,113 +928,175 @@ void create_screen_weather_page() {
                     lv_line_set_points(obj, line_points, 2);
                 }
                 {
-                    lv_obj_t *obj = lv_label_create(parent_obj);
-                    lv_obj_set_pos(obj, -16, -15);
+                    lv_obj_t *obj = lv_obj_create(parent_obj);
+                    lv_obj_set_pos(obj, -11, 39);
                     lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_label_set_text(obj, "3日天气预报");
+                    lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_pad_top(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_pad_right(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_pad_bottom(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_bg_opa(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_border_width(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_radius(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_layout(obj, LV_LAYOUT_FLEX, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_flex_flow(obj, LV_FLEX_FLOW_ROW, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_flex_main_place(obj, LV_FLEX_ALIGN_START, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_flex_cross_place(obj, LV_FLEX_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_flex_track_place(obj, LV_FLEX_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    {
+                        lv_obj_t *parent_obj = obj;
+                        {
+                            lv_obj_t *obj = lv_label_create(parent_obj);
+                            lv_obj_set_pos(obj, 10, 5);
+                            lv_obj_set_size(obj, 80, LV_SIZE_CONTENT);
+                            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_LEFT, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_label_set_text(obj, "今天");
+                        }
+                        {
+                            // weather_fcst_icon_0_label
+                            lv_obj_t *obj = lv_label_create(parent_obj);
+                            objects.weather_fcst_icon_0_label = obj;
+                            lv_obj_set_pos(obj, 139, 8);
+                            lv_obj_set_size(obj, 50, LV_SIZE_CONTENT);
+                            lv_obj_set_style_text_font(obj, ui_font_qweather_icons_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_label_set_text(obj, "");
+                        }
+                        {
+                            // weather_fcst_temp_0_label
+                            lv_obj_t *obj = lv_label_create(parent_obj);
+                            objects.weather_fcst_temp_0_label = obj;
+                            lv_obj_set_pos(obj, 198, 3);
+                            lv_obj_set_size(obj, 180, LV_SIZE_CONTENT);
+                            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_label_set_text(obj, "24℃-26℃");
+                        }
+                        {
+                            // weather_fcst_wind_0_label
+                            lv_obj_t *obj = lv_label_create(parent_obj);
+                            objects.weather_fcst_wind_0_label = obj;
+                            lv_obj_set_pos(obj, 440, 3);
+                            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_label_set_text(obj, "南风");
+                        }
+                    }
                 }
                 {
-                    lv_obj_t *obj = lv_label_create(parent_obj);
-                    lv_obj_set_pos(obj, -11, 36);
-                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_label_set_text(obj, "今天");
-                }
-                {
-                    lv_obj_t *obj = lv_label_create(parent_obj);
+                    lv_obj_t *obj = lv_obj_create(parent_obj);
                     lv_obj_set_pos(obj, -11, 93);
                     lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_label_set_text(obj, "明天");
+                    lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_pad_top(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_pad_right(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_pad_bottom(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_bg_opa(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_border_width(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_radius(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_layout(obj, LV_LAYOUT_FLEX, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_flex_flow(obj, LV_FLEX_FLOW_ROW, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_flex_main_place(obj, LV_FLEX_ALIGN_START, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_flex_cross_place(obj, LV_FLEX_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_flex_track_place(obj, LV_FLEX_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    {
+                        lv_obj_t *parent_obj = obj;
+                        {
+                            lv_obj_t *obj = lv_label_create(parent_obj);
+                            lv_obj_set_pos(obj, -11, 93);
+                            lv_obj_set_size(obj, 80, LV_SIZE_CONTENT);
+                            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_LEFT, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_label_set_text(obj, "明天");
+                        }
+                        {
+                            // weather_fcst_icon_1_label
+                            lv_obj_t *obj = lv_label_create(parent_obj);
+                            objects.weather_fcst_icon_1_label = obj;
+                            lv_obj_set_pos(obj, 91, 98);
+                            lv_obj_set_size(obj, 50, LV_SIZE_CONTENT);
+                            lv_obj_set_style_text_font(obj, ui_font_qweather_icons_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_label_set_text(obj, "");
+                        }
+                        {
+                            // weather_fcst_temp_1_label
+                            lv_obj_t *obj = lv_label_create(parent_obj);
+                            objects.weather_fcst_temp_1_label = obj;
+                            lv_obj_set_pos(obj, 162, 93);
+                            lv_obj_set_size(obj, 180, LV_SIZE_CONTENT);
+                            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_label_set_text(obj, "24℃-26℃");
+                        }
+                        {
+                            // weather_fcst_wind_1_label
+                            lv_obj_t *obj = lv_label_create(parent_obj);
+                            objects.weather_fcst_wind_1_label = obj;
+                            lv_obj_set_pos(obj, 354, 93);
+                            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_label_set_text(obj, "南风");
+                        }
+                    }
                 }
                 {
-                    lv_obj_t *obj = lv_label_create(parent_obj);
-                    lv_obj_set_pos(obj, -11, 151);
+                    lv_obj_t *obj = lv_obj_create(parent_obj);
+                    lv_obj_set_pos(obj, -11, 152);
                     lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_label_set_text(obj, "后天");
-                }
-                {
-                    // weather_fcst_icon_0_label
-                    lv_obj_t *obj = lv_label_create(parent_obj);
-                    objects.weather_fcst_icon_0_label = obj;
-                    lv_obj_set_pos(obj, 91, 41);
-                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-                    lv_obj_set_style_text_font(obj, ui_font_qweather_icons_32, LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_label_set_text(obj, "");
-                }
-                {
-                    // weather_fcst_icon_1_label
-                    lv_obj_t *obj = lv_label_create(parent_obj);
-                    objects.weather_fcst_icon_1_label = obj;
-                    lv_obj_set_pos(obj, 91, 98);
-                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-                    lv_obj_set_style_text_font(obj, ui_font_qweather_icons_32, LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_label_set_text(obj, "");
-                }
-                {
-                    // weather_fcst_icon_2_label
-                    lv_obj_t *obj = lv_label_create(parent_obj);
-                    objects.weather_fcst_icon_2_label = obj;
-                    lv_obj_set_pos(obj, 92, 156);
-                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-                    lv_obj_set_style_text_font(obj, ui_font_qweather_icons_32, LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_label_set_text(obj, "");
-                }
-                {
-                    // weather_fcst_temp_0_label
-                    lv_obj_t *obj = lv_label_create(parent_obj);
-                    objects.weather_fcst_temp_0_label = obj;
-                    lv_obj_set_pos(obj, 161, 36);
-                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_label_set_text(obj, "24℃-26℃");
-                }
-                {
-                    // weather_fcst_temp_1_label
-                    lv_obj_t *obj = lv_label_create(parent_obj);
-                    objects.weather_fcst_temp_1_label = obj;
-                    lv_obj_set_pos(obj, 162, 93);
-                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_label_set_text(obj, "24℃-26℃");
-                }
-                {
-                    // weather_fcst_temp_2_label
-                    lv_obj_t *obj = lv_label_create(parent_obj);
-                    objects.weather_fcst_temp_2_label = obj;
-                    lv_obj_set_pos(obj, 162, 146);
-                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_label_set_text(obj, "24℃-26℃");
-                }
-                {
-                    // weather_fcst_wind_0_label
-                    lv_obj_t *obj = lv_label_create(parent_obj);
-                    objects.weather_fcst_wind_0_label = obj;
-                    lv_obj_set_pos(obj, 353, 36);
-                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_label_set_text(obj, "南风");
-                }
-                {
-                    // weather_fcst_wind_1_label
-                    lv_obj_t *obj = lv_label_create(parent_obj);
-                    objects.weather_fcst_wind_1_label = obj;
-                    lv_obj_set_pos(obj, 354, 93);
-                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_label_set_text(obj, "南风");
-                }
-                {
-                    // weather_fcst_wind_2_label
-                    lv_obj_t *obj = lv_label_create(parent_obj);
-                    objects.weather_fcst_wind_2_label = obj;
-                    lv_obj_set_pos(obj, 355, 147);
-                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_label_set_text(obj, "南风");
+                    lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_pad_top(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_pad_right(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_pad_bottom(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_bg_opa(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_border_width(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_radius(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_layout(obj, LV_LAYOUT_FLEX, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_flex_flow(obj, LV_FLEX_FLOW_ROW, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_flex_main_place(obj, LV_FLEX_ALIGN_START, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_flex_cross_place(obj, LV_FLEX_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_flex_track_place(obj, LV_FLEX_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    {
+                        lv_obj_t *parent_obj = obj;
+                        {
+                            lv_obj_t *obj = lv_label_create(parent_obj);
+                            lv_obj_set_pos(obj, -11, 151);
+                            lv_obj_set_size(obj, 80, LV_SIZE_CONTENT);
+                            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_LEFT, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_label_set_text(obj, "后天");
+                        }
+                        {
+                            // weather_fcst_icon_2_label
+                            lv_obj_t *obj = lv_label_create(parent_obj);
+                            objects.weather_fcst_icon_2_label = obj;
+                            lv_obj_set_pos(obj, 92, 156);
+                            lv_obj_set_size(obj, 50, LV_SIZE_CONTENT);
+                            lv_obj_set_style_text_font(obj, ui_font_qweather_icons_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_label_set_text(obj, "");
+                        }
+                        {
+                            // weather_fcst_temp_2_label
+                            lv_obj_t *obj = lv_label_create(parent_obj);
+                            objects.weather_fcst_temp_2_label = obj;
+                            lv_obj_set_pos(obj, 162, 146);
+                            lv_obj_set_size(obj, 180, LV_SIZE_CONTENT);
+                            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_label_set_text(obj, "24℃-26℃");
+                        }
+                        {
+                            // weather_fcst_wind_2_label
+                            lv_obj_t *obj = lv_label_create(parent_obj);
+                            objects.weather_fcst_wind_2_label = obj;
+                            lv_obj_set_pos(obj, 355, 147);
+                            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_label_set_text(obj, "南风");
+                        }
+                    }
                 }
             }
         }
@@ -1157,13 +1219,13 @@ void delete_screen_weather_page() {
     objects.weather_city_label = 0;
     objects.weather_forecast_panel = 0;
     objects.weather_fcst_icon_0_label = 0;
-    objects.weather_fcst_icon_1_label = 0;
-    objects.weather_fcst_icon_2_label = 0;
     objects.weather_fcst_temp_0_label = 0;
-    objects.weather_fcst_temp_1_label = 0;
-    objects.weather_fcst_temp_2_label = 0;
     objects.weather_fcst_wind_0_label = 0;
+    objects.weather_fcst_icon_1_label = 0;
+    objects.weather_fcst_temp_1_label = 0;
     objects.weather_fcst_wind_1_label = 0;
+    objects.weather_fcst_icon_2_label = 0;
+    objects.weather_fcst_temp_2_label = 0;
     objects.weather_fcst_wind_2_label = 0;
     objects.sys_calendar = 0;
     objects.weather_city_picker_mask = 0;
