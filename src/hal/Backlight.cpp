@@ -1,10 +1,22 @@
 #include "Backlight.h"
+#include "../AppConfig.h"
 
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+/**
+ * @brief 获取单例实例
+ * @return Backlight& 单例引用
+ * @details 使用默认设备路径 APP_DEV_BACKLIGHT
+ */
+Backlight& Backlight::getInstance()
+{
+    static Backlight instance(APP_DEV_BACKLIGHT);
+    return instance;
+}
 
 /**
  * @brief 构造函数

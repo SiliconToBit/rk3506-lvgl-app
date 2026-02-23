@@ -8,6 +8,15 @@
 #include <sys/stat.h>
 
 /**
+ * @brief 获取单例实例
+ */
+MusicPlayer& MusicPlayer::getInstance()
+{
+    static MusicPlayer instance;
+    return instance;
+}
+
+/**
  * @brief 构造函数
  * @details 初始化播放索引和状态标志
  */
@@ -17,6 +26,8 @@ MusicPlayer::MusicPlayer()
     , m_paused(false)
     , m_stopRequest(false)
 {
+    // 设置默认音量为 75% (对应 DAC VOLUME 180)
+    m_audioDevice.setVolume(75);
 }
 
 /**
@@ -38,6 +49,12 @@ void MusicPlayer::scanDirectory(const std::string& dirPath)
     m_playlist.clear();
     m_currentIndex = -1;
 
+    if (dirPath.empty())
+    {
+        std::cerr << "Music directory path is empty" << std::endl;
+        return;
+    }
+
     DIR* dir = opendir(dirPath.c_str());
     if (dir == nullptr)
     {
@@ -57,7 +74,7 @@ void MusicPlayer::scanDirectory(const std::string& dirPath)
             if (ext == ".wav" || ext == ".mp3")
             {
                 std::string fullPath = dirPath;
-                if (fullPath.back() != '/')
+                if (!fullPath.empty() && fullPath.back() != '/')
                     fullPath += "/";
                 fullPath += filename;
                 m_playlist.push_back(fullPath);
@@ -91,57 +108,81 @@ const std::vector<std::string>& MusicPlayer::getPlaylist() const
  */
 void MusicPlayer::playbackLoop(std::string filepath)
 {
-    if (!m_decoder.open(filepath.c_str()))
-    {
-        std::cerr << "Failed to open file: " << filepath << std::endl;
-        m_running = false;
-        return;
-    }
-
-    if (!m_audioDevice.open(44100, 2))
-    {
-        std::cerr << "Failed to open audio device" << std::endl;
-        m_decoder.close();
-        m_running = false;
-        return;
-    }
-
-    std::cout << "Start playing: " << filepath << std::endl;
+    std::string currentFile = filepath;
 
     while (!m_stopRequest)
     {
+        if (!m_decoder.open(currentFile.c_str()))
         {
-            std::unique_lock<std::mutex> lock(m_playMutex);
-            while (m_paused && !m_stopRequest)
-            {
-                m_playCv.wait(lock);
-            }
+            std::cerr << "Failed to open file: " << currentFile << std::endl;
+            break;
         }
 
-        if (m_stopRequest)
+        if (!m_audioDevice.open(44100, 2))
+        {
+            std::cerr << "Failed to open audio device" << std::endl;
+            m_decoder.close();
             break;
+        }
 
-        bool success = m_decoder.decode([this](uint8_t* data, int size) {
+        std::cout << "Start playing: " << currentFile << std::endl;
+
+        bool naturalEnd = false;
+        while (!m_stopRequest)
+        {
+            {
+                std::unique_lock<std::mutex> lock(m_playMutex);
+                while (m_paused && !m_stopRequest)
+                {
+                    m_playCv.wait(lock);
+                }
+            }
+
             if (m_stopRequest)
-                return;
-            snd_pcm_uframes_t frames = size / 4;
-            snd_pcm_sframes_t written = m_audioDevice.write(data, frames);
-            if (written < 0)
             {
-                m_audioDevice.prepare();
+                break;
             }
-        });
 
-        if (!success)
+            bool success = m_decoder.decode([this](uint8_t* data, int size) {
+                if (m_stopRequest)
+                    return;
+                snd_pcm_uframes_t frames = size / 4;
+                snd_pcm_sframes_t written = m_audioDevice.write(data, frames);
+                if (written < 0)
+                {
+                    m_audioDevice.prepare();
+                }
+            });
+
+            if (!success)
+            {
+                naturalEnd = true;
+                break;
+            }
+        }
+
+        m_decoder.close();
+        m_audioDevice.close();
+        std::cout << "Playback finished: " << currentFile << std::endl;
+
+        if (m_stopRequest || !naturalEnd || m_playlist.empty())
         {
             break;
         }
+
+        m_currentIndex++;
+        if (m_currentIndex >= static_cast<int>(m_playlist.size()))
+        {
+            m_currentIndex = 0;
+        }
+
+        parseLrc(getCurrentSongLyrics());
+        currentFile = m_playlist[m_currentIndex];
+        m_paused = false;
+        std::cout << "Auto next: " << currentFile << std::endl;
     }
 
-    m_decoder.close();
-    m_audioDevice.close();
     m_running = false;
-    std::cout << "Playback finished: " << filepath << std::endl;
 }
 
 /**
@@ -152,6 +193,7 @@ void MusicPlayer::playbackLoop(std::string filepath)
 void MusicPlayer::playFile(const std::string& filepath)
 {
     stop();
+    m_decoder.close();
 
     m_stopRequest = false;
     m_paused = false;
@@ -169,7 +211,7 @@ void MusicPlayer::playFile(const std::string& filepath)
  */
 void MusicPlayer::play(int index)
 {
-    if (index >= 0 && index < m_playlist.size())
+    if (index >= 0 && index < static_cast<int>(m_playlist.size()))
     {
         m_currentIndex = index;
         playFile(m_playlist[m_currentIndex]);
@@ -190,7 +232,7 @@ void MusicPlayer::play(const std::string& filename)
  */
 void MusicPlayer::play()
 {
-    if (m_currentIndex >= 0 && m_currentIndex < m_playlist.size())
+    if (m_currentIndex >= 0 && m_currentIndex < static_cast<int>(m_playlist.size()))
     {
         playFile(m_playlist[m_currentIndex]);
     }
@@ -202,6 +244,7 @@ void MusicPlayer::play()
  */
 void MusicPlayer::play(double time)
 {
+    std::lock_guard<std::mutex> lock(m_playMutex);
     m_decoder.seek(time);
 }
 
@@ -211,14 +254,16 @@ void MusicPlayer::play(double time)
  */
 void MusicPlayer::loadMusic(int index)
 {
-    if (index >= 0 && index < m_playlist.size())
+    if (index >= 0 && index < static_cast<int>(m_playlist.size()))
     {
         m_currentIndex = index;
         stop();
+        m_decoder.close();
 
         std::string filepath = m_playlist[m_currentIndex];
         if (m_decoder.open(filepath.c_str()))
         {
+            parseLrc(getCurrentSongLyrics());
             std::cout << "Loaded music: " << filepath << std::endl;
         }
         else
@@ -335,7 +380,7 @@ bool MusicPlayer::isPlaying() const
  */
 std::string MusicPlayer::getCurrentSongName() const
 {
-    if (m_currentIndex >= 0 && m_currentIndex < m_playlist.size())
+    if (m_currentIndex >= 0 && m_currentIndex < static_cast<int>(m_playlist.size()))
     {
         std::string path = m_playlist[m_currentIndex];
         size_t lastSlash = path.find_last_of('/');
@@ -355,7 +400,7 @@ std::string MusicPlayer::getCurrentSongName() const
  */
 std::string MusicPlayer::getCurrentSongLyrics() const
 {
-    if (m_currentIndex >= 0 && m_currentIndex < m_playlist.size())
+    if (m_currentIndex >= 0 && m_currentIndex < static_cast<int>(m_playlist.size()))
     {
         std::string audioPath = m_playlist[m_currentIndex];
         size_t lastDot = audioPath.find_last_of('.');
@@ -365,11 +410,8 @@ std::string MusicPlayer::getCurrentSongLyrics() const
             std::ifstream file(lrcPath);
             if (file.is_open())
             {
-                std::string content;
-                file.seekg(0, std::ios::end);
-                content.resize(file.tellg());
-                file.seekg(0, std::ios::beg);
-                file.read(&content[0], content.size());
+                std::string content((std::istreambuf_iterator<char>(file)),
+                                    std::istreambuf_iterator<char>());
                 return content;
             }
         }
@@ -384,7 +426,7 @@ std::string MusicPlayer::getCurrentSongLyrics() const
  */
 std::string MusicPlayer::getCurrentAlbumCoverPath() const
 {
-    if (m_currentIndex >= 0 && m_currentIndex < m_playlist.size())
+    if (m_currentIndex >= 0 && m_currentIndex < static_cast<int>(m_playlist.size()))
     {
         std::string audioPath = m_playlist[m_currentIndex];
         size_t lastDot = audioPath.find_last_of('.');

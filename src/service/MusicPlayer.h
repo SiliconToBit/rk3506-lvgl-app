@@ -19,8 +19,10 @@
 class MusicPlayer
 {
 public:
-    MusicPlayer();
-    ~MusicPlayer();
+    static MusicPlayer& getInstance();
+    
+    MusicPlayer(const MusicPlayer&) = delete;
+    MusicPlayer& operator=(const MusicPlayer&) = delete;
 
     void scanDirectory(const std::string& dirPath);
     const std::vector<std::string>& getPlaylist() const;
@@ -50,6 +52,9 @@ public:
     double getMusicCurrentTime() const;
 
 private:
+    MusicPlayer();
+    ~MusicPlayer();
+    
     struct LyricLine
     {
         double time;

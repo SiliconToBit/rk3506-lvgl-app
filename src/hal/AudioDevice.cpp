@@ -1,4 +1,6 @@
 #include "AudioDevice.h"
+#include <algorithm>
+#include <cstdint>
 #include <iostream>
 
 /**
@@ -9,6 +11,8 @@ AudioDevice::AudioDevice()
     : m_pcmHandle(nullptr)
     , m_deviceName("default")
     , m_mixerName("Master")
+    , m_volumePercent(75)  // 默认音量 75%，对应 DAC VOLUME 180
+    , m_useSoftwareVolume(false)
 {
 }
 
@@ -83,7 +87,10 @@ snd_pcm_sframes_t AudioDevice::write(const void* buffer, snd_pcm_uframes_t frame
     if (!m_pcmHandle)
         return -1;
 
-    snd_pcm_sframes_t frames_written = snd_pcm_writei(m_pcmHandle, buffer, frames);
+    const void* writeBuffer = buffer;
+    applySoftwareVolume(buffer, frames, &writeBuffer);
+
+    snd_pcm_sframes_t frames_written = snd_pcm_writei(m_pcmHandle, writeBuffer, frames);
 
     if (frames_written < 0)
     {
@@ -141,11 +148,30 @@ bool AudioDevice::initMixer(snd_mixer_t** handle, snd_mixer_elem_t** elem)
 
     snd_mixer_selem_id_alloca(&sid);
     snd_mixer_selem_id_set_index(sid, 0);
-    snd_mixer_selem_id_set_name(sid, m_mixerName.c_str());
-    *elem = snd_mixer_find_selem(*handle, sid);
+
+    static const char* controls[] = {
+        "DAC VOLUME",
+        "Master",
+        "PCM",
+        "Speaker",
+        "Headphone"
+    };
+
+    *elem = nullptr;
+    for (const char* controlName : controls)
+    {
+        snd_mixer_selem_id_set_name(sid, controlName);
+        *elem = snd_mixer_find_selem(*handle, sid);
+        if (*elem)
+        {
+            m_mixerName = controlName;
+            break;
+        }
+    }
 
     if (!*elem)
     {
+        std::cerr << "[AudioDevice] No ALSA mixer playback control found, fallback to software volume" << std::endl;
         snd_mixer_close(*handle);
         return false;
     }
@@ -159,6 +185,11 @@ bool AudioDevice::initMixer(snd_mixer_t** handle, snd_mixer_elem_t** elem)
  */
 void AudioDevice::setVolume(long volume)
 {
+    volume = std::clamp(volume, 0L, 100L);
+    m_volumePercent.store(volume, std::memory_order_relaxed);
+    
+    std::cout << "[AudioDevice] setVolume request=" << volume << "%" << std::endl;
+
     snd_mixer_t* handle;
     snd_mixer_elem_t* elem;
     long min, max;
@@ -166,9 +197,32 @@ void AudioDevice::setVolume(long volume)
     if (initMixer(&handle, &elem))
     {
         snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
-        long vol = min + (volume * (max - min) / 100);
+        
+        long vol;
+        if (m_mixerName == "DAC VOLUME")
+        {
+            // DAC VOLUME: 硬件范围 0-255，但有效范围 0-240
+            // 将 0-100% 映射到 0-240
+            const long effectiveMax = 240;
+            vol = volume * effectiveMax / 100;
+        }
+        else
+        {
+            // 其他混音器使用标准映射
+            vol = min + (volume * (max - min) / 100);
+        }
+        
         snd_mixer_selem_set_playback_volume_all(elem, vol);
+        
         snd_mixer_close(handle);
+        m_useSoftwareVolume.store(false, std::memory_order_relaxed);
+        std::cout << "[AudioDevice] setVolume applied via ALSA mixer: " << m_mixerName 
+                  << " (" << min << "-" << max << ") -> " << vol << std::endl;
+    }
+    else
+    {
+        m_useSoftwareVolume.store(true, std::memory_order_relaxed);
+        std::cout << "[AudioDevice] setVolume fallback to software scaling" << std::endl;
     }
 }
 
@@ -182,7 +236,7 @@ long AudioDevice::getVolume()
     snd_mixer_t* handle;
     snd_mixer_elem_t* elem;
     long min, max, vol;
-    long result = 0;
+    long result = m_volumePercent.load(std::memory_order_relaxed);
 
     if (initMixer(&handle, &elem))
     {
@@ -191,11 +245,62 @@ long AudioDevice::getVolume()
         {
             snd_mixer_selem_get_playback_volume(elem, SND_MIXER_SCHN_FRONT_LEFT, &vol);
         }
-        if (max != min)
+        
+        if (m_mixerName == "DAC VOLUME")
+        {
+            // DAC VOLUME: 从 0-240 映射回 0-100%
+            const long effectiveMax = 240;
+            if (vol > effectiveMax) vol = effectiveMax;
+            result = vol * 100 / effectiveMax;
+        }
+        else if (max != min)
         {
             result = (vol - min) * 100 / (max - min);
         }
+        
         snd_mixer_close(handle);
+        m_volumePercent.store(result, std::memory_order_relaxed);
+        m_useSoftwareVolume.store(false, std::memory_order_relaxed);
+    }
+    else
+    {
+        m_useSoftwareVolume.store(true, std::memory_order_relaxed);
     }
     return result;
+}
+
+void AudioDevice::applySoftwareVolume(const void* buffer, snd_pcm_uframes_t frames, const void** outBuffer)
+{
+    if (!outBuffer)
+    {
+        return;
+    }
+
+    const long volumePercent = m_volumePercent.load(std::memory_order_relaxed);
+    if (volumePercent >= 100)
+    {
+        *outBuffer = buffer;
+        return;
+    }
+
+    const int16_t* src = static_cast<const int16_t*>(buffer);
+    const std::size_t sampleCount = static_cast<std::size_t>(frames) * 2;
+    m_softVolumeBuffer.resize(sampleCount);
+
+    const int scale = static_cast<int>((volumePercent * volumePercent) / 100);
+    for (std::size_t i = 0; i < sampleCount; ++i)
+    {
+        int32_t scaled = static_cast<int32_t>(src[i]) * scale / 100;
+        if (scaled > INT16_MAX)
+        {
+            scaled = INT16_MAX;
+        }
+        else if (scaled < INT16_MIN)
+        {
+            scaled = INT16_MIN;
+        }
+        m_softVolumeBuffer[i] = static_cast<int16_t>(scaled);
+    }
+
+    *outBuffer = m_softVolumeBuffer.data();
 }

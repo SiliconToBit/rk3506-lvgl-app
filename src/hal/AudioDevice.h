@@ -7,7 +7,9 @@
 #ifndef LVGL_APP_HAL_AUDIO_DEVICE_H
 #define LVGL_APP_HAL_AUDIO_DEVICE_H
 
+#include <atomic>
 #include <string>
+#include <vector>
 
 extern "C"
 {
@@ -32,8 +34,12 @@ private:
     snd_pcm_t* m_pcmHandle;
     std::string m_deviceName;
     std::string m_mixerName;
+    std::atomic<long> m_volumePercent;
+    std::atomic<bool> m_useSoftwareVolume;
+    std::vector<int16_t> m_softVolumeBuffer;
 
     bool initMixer(snd_mixer_t** handle, snd_mixer_elem_t** elem);
+    void applySoftwareVolume(const void* buffer, snd_pcm_uframes_t frames, const void** outBuffer);
 };
 
 #endif // LVGL_APP_HAL_AUDIO_DEVICE_H

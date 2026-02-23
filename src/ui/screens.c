@@ -12,8 +12,8 @@
 
 objects_t objects;
 
-static const char *screen_names[] = { "Main", "P1", "P2", "WeatherPage", "SensorPage", "SettingPage", "CpuPage", "ImagePage", "VideoPage", "CameraPage", "MusicPage" };
-static const char *object_names[] = { "main", "p1", "p2", "weather_page", "sensor_page", "setting_page", "cpu_page", "image_page", "video_page", "camera_page", "music_page", "setting_btn", "weather_btn", "sensor_btn", "music_btn", "image_btn", "cpu_btn", "video_btn", "camera_btn", "setting_btn_1", "weather_time_panel", "temp_label", "weather_icon_label", "winddir_label", "weather_text_label", "time_location_panel", "weather_forecast_panel" };
+static const char *screen_names[] = { "Main", "P1", "P2", "MusicPage", "WeatherPage", "SensorPage", "SettingPage", "CpuPage", "ImagePage", "VideoPage", "CameraPage" };
+static const char *object_names[] = { "main", "p1", "p2", "music_page", "weather_page", "sensor_page", "setting_page", "cpu_page", "image_page", "video_page", "camera_page", "setting_btn", "weather_btn", "sensor_btn", "music_btn", "image_btn", "cpu_btn", "video_btn", "camera_btn", "ai_btn", "obj0", "obj1", "obj2", "music_album_img", "music_volume_slider", "music_progress_slider", "music_curr_time_label", "music_total_time_label", "music_title_label", "music_lyrics_label", "music_play_pause_imgbtn", "music_list_panel", "scroll_list_area", "obj3", "weather_time_panel", "weather_temp_label", "weather_wind_label", "weather_text_label", "weather_icon_label", "time_location_panel", "weather_time_label", "weather_data_label", "weather_city_label", "weather_forecast_panel", "weather_fcst_icon_0_label", "weather_fcst_icon_1_label", "weather_fcst_icon_2_label", "weather_fcst_temp_0_label", "weather_fcst_temp_1_label", "weather_fcst_temp_2_label", "weather_fcst_wind_0_label", "weather_fcst_wind_1_label", "weather_fcst_wind_2_label", "sys_calendar", "weather_city_picker_mask", "obj4", "obj5", "weather_prov_roller", "weather_city_roller", "weather_county_roller", "led0_btn", "led1_btn", "rgb_led_btn", "buzzer_btn", "dht11_temp_label", "dht11_humi_label", "mpu6050_temp_label", "mpu6050_pitch_label", "mpu6050_roll_label", "mpu6050_yaw_label" };
 
 //
 // Event handlers
@@ -43,6 +43,17 @@ static void event_handler_cb_p1_p1(lv_event_t *e) {
     }
 }
 
+static void event_handler_cb_p1_setting_btn(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_CLICKED) {
+        e->user_data = (void *)0;
+        flowPropagateValueLVGLEvent(flowState, 0, 0, e);
+    }
+}
+
 static void event_handler_cb_p1_weather_btn(lv_event_t *e) {
     lv_event_code_t event = lv_event_get_code(e);
     void *flowState = lv_event_get_user_data(e);
@@ -51,6 +62,72 @@ static void event_handler_cb_p1_weather_btn(lv_event_t *e) {
     if (event == LV_EVENT_CLICKED) {
         e->user_data = (void *)0;
         flowPropagateValueLVGLEvent(flowState, 2, 0, e);
+    }
+}
+
+static void event_handler_cb_p1_sensor_btn(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_CLICKED) {
+        e->user_data = (void *)0;
+        flowPropagateValueLVGLEvent(flowState, 3, 0, e);
+    }
+}
+
+static void event_handler_cb_p1_music_btn(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_CLICKED) {
+        e->user_data = (void *)0;
+        flowPropagateValueLVGLEvent(flowState, 4, 0, e);
+    }
+}
+
+static void event_handler_cb_p1_image_btn(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_CLICKED) {
+        e->user_data = (void *)0;
+        flowPropagateValueLVGLEvent(flowState, 5, 0, e);
+    }
+}
+
+static void event_handler_cb_p1_cpu_btn(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_CLICKED) {
+        e->user_data = (void *)0;
+        flowPropagateValueLVGLEvent(flowState, 6, 0, e);
+    }
+}
+
+static void event_handler_cb_p1_video_btn(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_CLICKED) {
+        e->user_data = (void *)0;
+        flowPropagateValueLVGLEvent(flowState, 7, 0, e);
+    }
+}
+
+static void event_handler_cb_p1_camera_btn(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_CLICKED) {
+        e->user_data = (void *)0;
+        flowPropagateValueLVGLEvent(flowState, 8, 0, e);
     }
 }
 
@@ -65,7 +142,236 @@ static void event_handler_cb_p2_p2(lv_event_t *e) {
     }
 }
 
+static void event_handler_cb_music_page_music_page(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_GESTURE) {
+        e->user_data = (void *)0;
+        flowPropagateValueLVGLEvent(flowState, 1, 0, e);
+    }
+    if (event == LV_EVENT_SCREEN_LOADED) {
+        e->user_data = (void *)0;
+        action_init_music_screen(e);
+    }
+    if (event == LV_EVENT_SCREEN_UNLOADED) {
+        e->user_data = (void *)0;
+        action_deinit_music_screen(e);
+    }
+}
+
+static void event_handler_cb_music_page_obj0(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_CLICKED) {
+        e->user_data = (void *)0;
+        action_play_next(e);
+    }
+}
+
+static void event_handler_cb_music_page_obj1(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_CLICKED) {
+        e->user_data = (void *)0;
+        action_play_prev(e);
+    }
+}
+
+static void event_handler_cb_music_page_obj2(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_CLICKED) {
+        e->user_data = (void *)0;
+        flowPropagateValueLVGLEvent(flowState, 3, 0, e);
+    }
+    if (event == LV_EVENT_CLICKED) {
+        e->user_data = (void *)0;
+        action_load_music_directory(e);
+    }
+}
+
+static void event_handler_cb_music_page_music_album_img(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_CLICKED) {
+        e->user_data = (void *)0;
+        action_update_album_art(e);
+    }
+}
+
+static void event_handler_cb_music_page_music_volume_slider(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_VALUE_CHANGED) {
+        e->user_data = (void *)0;
+        action_music_volume_changed(e);
+    }
+}
+
+static void event_handler_cb_music_page_music_progress_slider(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_VALUE_CHANGED) {
+        e->user_data = (void *)0;
+        action_music_progress_changed(e);
+    }
+}
+
+static void event_handler_cb_music_page_music_play_pause_imgbtn(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_CLICKED) {
+        e->user_data = (void *)0;
+        action_toggle_play_pause(e);
+    }
+}
+
+static void event_handler_cb_music_page_obj3(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_CLICKED) {
+        e->user_data = (void *)0;
+        flowPropagateValueLVGLEvent(flowState, 15, 0, e);
+    }
+}
+
 static void event_handler_cb_weather_page_weather_page(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_GESTURE) {
+        e->user_data = (void *)0;
+        flowPropagateValueLVGLEvent(flowState, 1, 0, e);
+    }
+    if (event == LV_EVENT_SCREEN_LOADED) {
+        e->user_data = (void *)0;
+        action_init_weather_screen(e);
+    }
+    if (event == LV_EVENT_SCREEN_UNLOADED) {
+        e->user_data = (void *)0;
+        action_deinit_weather_screen(e);
+    }
+}
+
+static void event_handler_cb_weather_page_weather_city_label(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_CLICKED) {
+        e->user_data = (void *)0;
+        flowPropagateValueLVGLEvent(flowState, 11, 0, e);
+    }
+}
+
+static void event_handler_cb_weather_page_obj4(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_CLICKED) {
+        e->user_data = (void *)0;
+        flowPropagateValueLVGLEvent(flowState, 30, 0, e);
+    }
+}
+
+static void event_handler_cb_weather_page_obj5(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_CLICKED) {
+        e->user_data = (void *)0;
+        action_confirm_city_picker(e);
+    }
+}
+
+static void event_handler_cb_weather_page_weather_prov_roller(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_VALUE_CHANGED) {
+        e->user_data = (void *)0;
+        action_prov_changed(e);
+    }
+}
+
+static void event_handler_cb_weather_page_weather_city_roller(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_VALUE_CHANGED) {
+        e->user_data = (void *)0;
+        action_city_changed(e);
+    }
+}
+
+static void event_handler_cb_sensor_page_sensor_page(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_GESTURE) {
+        e->user_data = (void *)0;
+        flowPropagateValueLVGLEvent(flowState, 1, 0, e);
+    }
+}
+
+static void event_handler_cb_setting_page_setting_page(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_GESTURE) {
+        e->user_data = (void *)0;
+        flowPropagateValueLVGLEvent(flowState, 1, 0, e);
+    }
+}
+
+static void event_handler_cb_image_page_image_page(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_GESTURE) {
+        e->user_data = (void *)0;
+        flowPropagateValueLVGLEvent(flowState, 1, 0, e);
+    }
+}
+
+static void event_handler_cb_video_page_video_page(lv_event_t *e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    void *flowState = lv_event_get_user_data(e);
+    (void)flowState;
+    
+    if (event == LV_EVENT_GESTURE) {
+        e->user_data = (void *)0;
+        flowPropagateValueLVGLEvent(flowState, 1, 0, e);
+    }
+}
+
+static void event_handler_cb_camera_page_camera_page(lv_event_t *e) {
     lv_event_code_t event = lv_event_get_code(e);
     void *flowState = lv_event_get_user_data(e);
     (void)flowState;
@@ -102,6 +408,12 @@ void create_screen_main() {
     tick_screen_main();
 }
 
+void delete_screen_main() {
+    lv_obj_del(objects.main);
+    objects.main = 0;
+    deletePageFlowState(0);
+}
+
 void tick_screen_main() {
     void *flowState = getFlowState(0, 0);
     (void)flowState;
@@ -123,7 +435,8 @@ void create_screen_p1() {
             objects.setting_btn = obj;
             lv_obj_set_pos(obj, 63, 70);
             lv_obj_set_size(obj, 128, 128);
-            lv_obj_set_style_bg_img_src(obj, &img_setting4, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_add_event_cb(obj, event_handler_cb_p1_setting_btn, LV_EVENT_ALL, flowState);
+            lv_obj_set_style_bg_img_src(obj, &img_setting, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_bg_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_radius(obj, 26, LV_PART_MAIN | LV_STATE_DEFAULT);
         }
@@ -144,6 +457,7 @@ void create_screen_p1() {
             objects.sensor_btn = obj;
             lv_obj_set_pos(obj, 676, 70);
             lv_obj_set_size(obj, 128, 128);
+            lv_obj_add_event_cb(obj, event_handler_cb_p1_sensor_btn, LV_EVENT_ALL, flowState);
             lv_obj_set_style_bg_img_src(obj, &img_sensor, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_bg_color(obj, lv_color_hex(0xff2a632c), LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_radius(obj, 26, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -154,6 +468,7 @@ void create_screen_p1() {
             objects.music_btn = obj;
             lv_obj_set_pos(obj, 267, 284);
             lv_obj_set_size(obj, 128, 128);
+            lv_obj_add_event_cb(obj, event_handler_cb_p1_music_btn, LV_EVENT_ALL, flowState);
             lv_obj_set_style_bg_img_src(obj, &img_music, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_bg_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_radius(obj, 26, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -164,6 +479,7 @@ void create_screen_p1() {
             objects.image_btn = obj;
             lv_obj_set_pos(obj, 63, 284);
             lv_obj_set_size(obj, 128, 128);
+            lv_obj_add_event_cb(obj, event_handler_cb_p1_image_btn, LV_EVENT_ALL, flowState);
             lv_obj_set_style_bg_img_src(obj, &img_image, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_bg_color(obj, lv_color_hex(0xff237cff), LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_radius(obj, 26, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -174,6 +490,7 @@ void create_screen_p1() {
             objects.cpu_btn = obj;
             lv_obj_set_pos(obj, 472, 70);
             lv_obj_set_size(obj, 128, 128);
+            lv_obj_add_event_cb(obj, event_handler_cb_p1_cpu_btn, LV_EVENT_ALL, flowState);
             lv_obj_set_style_bg_img_src(obj, &img_cpu, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_bg_color(obj, lv_color_hex(0xffc5c5c5), LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_radius(obj, 26, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -184,7 +501,8 @@ void create_screen_p1() {
             objects.video_btn = obj;
             lv_obj_set_pos(obj, 472, 284);
             lv_obj_set_size(obj, 128, 128);
-            lv_obj_set_style_bg_img_src(obj, &img_video2, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_add_event_cb(obj, event_handler_cb_p1_video_btn, LV_EVENT_ALL, flowState);
+            lv_obj_set_style_bg_img_src(obj, &img_video, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_bg_color(obj, lv_color_hex(0xfff5f5f5), LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_radius(obj, 26, LV_PART_MAIN | LV_STATE_DEFAULT);
         }
@@ -194,6 +512,7 @@ void create_screen_p1() {
             objects.camera_btn = obj;
             lv_obj_set_pos(obj, 676, 284);
             lv_obj_set_size(obj, 128, 128);
+            lv_obj_add_event_cb(obj, event_handler_cb_p1_camera_btn, LV_EVENT_ALL, flowState);
             lv_obj_set_style_bg_img_src(obj, &img_camera, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_bg_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_radius(obj, 26, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -201,6 +520,20 @@ void create_screen_p1() {
     }
     
     tick_screen_p1();
+}
+
+void delete_screen_p1() {
+    lv_obj_del(objects.p1);
+    objects.p1 = 0;
+    objects.setting_btn = 0;
+    objects.weather_btn = 0;
+    objects.sensor_btn = 0;
+    objects.music_btn = 0;
+    objects.image_btn = 0;
+    objects.cpu_btn = 0;
+    objects.video_btn = 0;
+    objects.camera_btn = 0;
+    deletePageFlowState(1);
 }
 
 void tick_screen_p1() {
@@ -219,9 +552,9 @@ void create_screen_p2() {
     {
         lv_obj_t *parent_obj = obj;
         {
-            // setting_btn_1
+            // ai_btn
             lv_obj_t *obj = lv_btn_create(parent_obj);
-            objects.setting_btn_1 = obj;
+            objects.ai_btn = obj;
             lv_obj_set_pos(obj, 63, 70);
             lv_obj_set_size(obj, 128, 128);
             lv_obj_set_style_bg_img_src(obj, &img_doubao, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -233,13 +566,199 @@ void create_screen_p2() {
     tick_screen_p2();
 }
 
+void delete_screen_p2() {
+    lv_obj_del(objects.p2);
+    objects.p2 = 0;
+    objects.ai_btn = 0;
+    deletePageFlowState(2);
+}
+
 void tick_screen_p2() {
     void *flowState = getFlowState(0, 2);
     (void)flowState;
 }
 
-void create_screen_weather_page() {
+void create_screen_music_page() {
     void *flowState = getFlowState(0, 3);
+    (void)flowState;
+    lv_obj_t *obj = lv_obj_create(0);
+    objects.music_page = obj;
+    lv_obj_set_pos(obj, 0, 0);
+    lv_obj_set_size(obj, 854, 480);
+    lv_obj_add_event_cb(obj, event_handler_cb_music_page_music_page, LV_EVENT_ALL, flowState);
+    lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_bg_color(obj, lv_color_hex(0xffb4b4b4), LV_PART_MAIN | LV_STATE_DEFAULT);
+    {
+        lv_obj_t *parent_obj = obj;
+        {
+            lv_obj_t *obj = lv_img_create(parent_obj);
+            objects.obj0 = obj;
+            lv_obj_set_pos(obj, 649, 336);
+            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_img_set_src(obj, &img_next);
+            lv_obj_add_event_cb(obj, event_handler_cb_music_page_obj0, LV_EVENT_ALL, flowState);
+            lv_obj_add_flag(obj, LV_OBJ_FLAG_CLICKABLE);
+        }
+        {
+            lv_obj_t *obj = lv_img_create(parent_obj);
+            objects.obj1 = obj;
+            lv_obj_set_pos(obj, 415, 336);
+            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_img_set_src(obj, &img_pre);
+            lv_obj_add_event_cb(obj, event_handler_cb_music_page_obj1, LV_EVENT_ALL, flowState);
+            lv_obj_add_flag(obj, LV_OBJ_FLAG_CLICKABLE);
+        }
+        {
+            lv_obj_t *obj = lv_img_create(parent_obj);
+            objects.obj2 = obj;
+            lv_obj_set_pos(obj, 766, 336);
+            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_img_set_src(obj, &img_list);
+            lv_obj_add_event_cb(obj, event_handler_cb_music_page_obj2, LV_EVENT_ALL, flowState);
+            lv_obj_add_flag(obj, LV_OBJ_FLAG_CLICKABLE);
+        }
+        {
+            // music_album_img
+            lv_obj_t *obj = lv_img_create(parent_obj);
+            objects.music_album_img = obj;
+            lv_obj_set_pos(obj, 49, 112);
+            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_img_set_src(obj, &img_music_image);
+            lv_obj_add_event_cb(obj, event_handler_cb_music_page_music_album_img, LV_EVENT_ALL, flowState);
+        }
+        {
+            lv_obj_t *obj = lv_img_create(parent_obj);
+            lv_obj_set_pos(obj, 415, 240);
+            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_img_set_src(obj, &img_sound);
+        }
+        {
+            // music_volume_slider
+            lv_obj_t *obj = lv_slider_create(parent_obj);
+            objects.music_volume_slider = obj;
+            lv_obj_set_pos(obj, 499, 262);
+            lv_obj_set_size(obj, 279, 10);
+            lv_slider_set_value(obj, 50, LV_ANIM_OFF);
+            lv_obj_add_event_cb(obj, event_handler_cb_music_page_music_volume_slider, LV_EVENT_ALL, flowState);
+        }
+        {
+            // music_progress_slider
+            lv_obj_t *obj = lv_slider_create(parent_obj);
+            objects.music_progress_slider = obj;
+            lv_obj_set_pos(obj, 415, 442);
+            lv_obj_set_size(obj, 415, 10);
+            lv_slider_set_value(obj, 50, LV_ANIM_OFF);
+            lv_obj_add_event_cb(obj, event_handler_cb_music_page_music_progress_slider, LV_EVENT_ALL, flowState);
+        }
+        {
+            // music_curr_time_label
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.music_curr_time_label = obj;
+            lv_obj_set_pos(obj, 415, 410);
+            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_16, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "00:00");
+        }
+        {
+            // music_total_time_label
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.music_total_time_label = obj;
+            lv_obj_set_pos(obj, 783, 410);
+            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_16, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "04:11");
+        }
+        {
+            // music_title_label
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.music_title_label = obj;
+            lv_obj_set_pos(obj, 559, 34);
+            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "歌曲名字");
+        }
+        {
+            // music_lyrics_label
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.music_lyrics_label = obj;
+            lv_obj_set_pos(obj, 494, 101);
+            lv_obj_set_size(obj, 289, 112);
+            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "歌词嘎嘎减肥的是快乐");
+        }
+        {
+            // music_play_pause_imgbtn
+            lv_obj_t *obj = lv_imgbtn_create(parent_obj);
+            objects.music_play_pause_imgbtn = obj;
+            lv_obj_set_pos(obj, 532, 336);
+            lv_obj_set_size(obj, LV_SIZE_CONTENT, 64);
+            lv_imgbtn_set_src(obj, LV_IMGBTN_STATE_RELEASED, NULL, &img_play, NULL);
+            lv_imgbtn_set_src(obj, LV_IMGBTN_STATE_CHECKED_RELEASED, NULL, &img_pause, NULL);
+            lv_obj_add_event_cb(obj, event_handler_cb_music_page_music_play_pause_imgbtn, LV_EVENT_ALL, flowState);
+            lv_obj_add_flag(obj, LV_OBJ_FLAG_CHECKABLE);
+        }
+        {
+            // music_list_panel
+            lv_obj_t *obj = lv_obj_create(parent_obj);
+            objects.music_list_panel = obj;
+            lv_obj_set_pos(obj, 854, 0);
+            lv_obj_set_size(obj, 250, LV_PCT(100));
+            lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
+            lv_obj_set_style_bg_opa(obj, 220, LV_PART_MAIN | LV_STATE_DEFAULT);
+            {
+                lv_obj_t *parent_obj = obj;
+                {
+                    // scroll_list_area
+                    lv_obj_t *obj = lv_obj_create(parent_obj);
+                    objects.scroll_list_area = obj;
+                    lv_obj_set_pos(obj, -22, 50);
+                    lv_obj_set_size(obj, 250, 394);
+                    lv_obj_set_style_layout(obj, LV_LAYOUT_FLEX, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_flex_flow(obj, LV_FLEX_FLOW_COLUMN, LV_PART_MAIN | LV_STATE_DEFAULT);
+                }
+                {
+                    lv_obj_t *obj = lv_btn_create(parent_obj);
+                    objects.obj3 = obj;
+                    lv_obj_set_pos(obj, 22, -22);
+                    lv_obj_set_size(obj, 64, 64);
+                    lv_obj_add_event_cb(obj, event_handler_cb_music_page_obj3, LV_EVENT_ALL, flowState);
+                    lv_obj_set_style_bg_img_src(obj, &img_off, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_align(obj, LV_ALIGN_TOP_RIGHT, LV_PART_MAIN | LV_STATE_DEFAULT);
+                }
+            }
+        }
+    }
+    
+    tick_screen_music_page();
+}
+
+void delete_screen_music_page() {
+    lv_obj_del(objects.music_page);
+    objects.music_page = 0;
+    objects.obj0 = 0;
+    objects.obj1 = 0;
+    objects.obj2 = 0;
+    objects.music_album_img = 0;
+    objects.music_volume_slider = 0;
+    objects.music_progress_slider = 0;
+    objects.music_curr_time_label = 0;
+    objects.music_total_time_label = 0;
+    objects.music_title_label = 0;
+    objects.music_lyrics_label = 0;
+    objects.music_play_pause_imgbtn = 0;
+    objects.music_list_panel = 0;
+    objects.scroll_list_area = 0;
+    objects.obj3 = 0;
+    deletePageFlowState(3);
+}
+
+void tick_screen_music_page() {
+    void *flowState = getFlowState(0, 3);
+    (void)flowState;
+}
+
+void create_screen_weather_page() {
+    void *flowState = getFlowState(0, 4);
     (void)flowState;
     lv_obj_t *obj = lv_obj_create(0);
     objects.weather_page = obj;
@@ -254,16 +773,59 @@ void create_screen_weather_page() {
             objects.weather_time_panel = obj;
             lv_obj_set_pos(obj, 20, 20);
             lv_obj_set_size(obj, 400, 200);
+            lv_obj_set_style_align(obj, LV_ALIGN_DEFAULT, LV_PART_MAIN | LV_STATE_DEFAULT);
             {
                 lv_obj_t *parent_obj = obj;
                 {
-                    // temp_label
-                    lv_obj_t *obj = lv_label_create(parent_obj);
-                    objects.temp_label = obj;
-                    lv_obj_set_pos(obj, 222, 12);
-                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_24, LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_label_set_text(obj, "26℃");
+                    lv_obj_t *obj = lv_obj_create(parent_obj);
+                    lv_obj_set_pos(obj, 163, 16);
+                    lv_obj_set_size(obj, 192, 124);
+                    lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_pad_top(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_pad_right(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_pad_bottom(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_bg_opa(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_border_width(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_radius(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+                    lv_obj_set_style_layout(obj, LV_LAYOUT_FLEX, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_flex_flow(obj, LV_FLEX_FLOW_COLUMN, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_flex_cross_place(obj, LV_FLEX_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_flex_main_place(obj, LV_FLEX_ALIGN_SPACE_EVENLY, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_flex_track_place(obj, LV_FLEX_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    {
+                        lv_obj_t *parent_obj = obj;
+                        {
+                            // weather_temp_label
+                            lv_obj_t *obj = lv_label_create(parent_obj);
+                            objects.weather_temp_label = obj;
+                            lv_obj_set_pos(obj, 222, 12);
+                            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_24, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_obj_set_style_align(obj, LV_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_label_set_text(obj, "26℃");
+                        }
+                        {
+                            // weather_wind_label
+                            lv_obj_t *obj = lv_label_create(parent_obj);
+                            objects.weather_wind_label = obj;
+                            lv_obj_set_pos(obj, 200, 62);
+                            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_24, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_obj_set_style_align(obj, LV_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_label_set_text(obj, "东风二级");
+                        }
+                        {
+                            // weather_text_label
+                            lv_obj_t *obj = lv_label_create(parent_obj);
+                            objects.weather_text_label = obj;
+                            lv_obj_set_pos(obj, 152, 111);
+                            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_24, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_obj_set_style_align(obj, LV_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_label_set_text(obj, "大暴雨到特大暴雨");
+                        }
+                    }
                 }
                 {
                     // weather_icon_label
@@ -274,24 +836,6 @@ void create_screen_weather_page() {
                     lv_obj_set_style_text_font(obj, ui_font_qweather_icons_128, LV_PART_MAIN | LV_STATE_DEFAULT);
                     lv_label_set_text(obj, "");
                 }
-                {
-                    // winddir_label
-                    lv_obj_t *obj = lv_label_create(parent_obj);
-                    objects.winddir_label = obj;
-                    lv_obj_set_pos(obj, 200, 58);
-                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_24, LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_label_set_text(obj, "东风二级");
-                }
-                {
-                    // weather_text_label
-                    lv_obj_t *obj = lv_label_create(parent_obj);
-                    objects.weather_text_label = obj;
-                    lv_obj_set_pos(obj, 152, 111);
-                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_24, LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_label_set_text(obj, "大暴雨到特大暴雨");
-                }
             }
         }
         {
@@ -300,28 +844,60 @@ void create_screen_weather_page() {
             objects.time_location_panel = obj;
             lv_obj_set_pos(obj, 445, 20);
             lv_obj_set_size(obj, 400, 200);
+            lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
             {
                 lv_obj_t *parent_obj = obj;
                 {
-                    lv_obj_t *obj = lv_label_create(parent_obj);
-                    lv_obj_set_pos(obj, 67, 78);
+                    lv_obj_t *obj = lv_obj_create(parent_obj);
+                    lv_obj_set_pos(obj, 72, -17);
                     lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_24, LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_label_set_text(obj, "2025-12-11 星期四");
-                }
-                {
-                    lv_obj_t *obj = lv_label_create(parent_obj);
-                    lv_obj_set_pos(obj, 83, -19);
-                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_64, LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_label_set_text(obj, "12:00");
-                }
-                {
-                    lv_obj_t *obj = lv_label_create(parent_obj);
-                    lv_obj_set_pos(obj, 109, 120);
-                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_label_set_text(obj, "广州番禺");
+                    lv_obj_set_style_pad_left(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_pad_top(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_pad_right(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_pad_bottom(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_bg_opa(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_border_width(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_radius(obj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_layout(obj, LV_LAYOUT_FLEX, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_flex_flow(obj, LV_FLEX_FLOW_COLUMN, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_flex_main_place(obj, LV_FLEX_ALIGN_SPACE_EVENLY, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_flex_cross_place(obj, LV_FLEX_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_obj_set_style_flex_track_place(obj, LV_FLEX_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    {
+                        lv_obj_t *parent_obj = obj;
+                        {
+                            // weather_time_label
+                            lv_obj_t *obj = lv_label_create(parent_obj);
+                            objects.weather_time_label = obj;
+                            lv_obj_set_pos(obj, 83, -19);
+                            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_64, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_obj_set_style_align(obj, LV_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_label_set_text(obj, "12:00");
+                        }
+                        {
+                            // weather_data_label
+                            lv_obj_t *obj = lv_label_create(parent_obj);
+                            objects.weather_data_label = obj;
+                            lv_obj_set_pos(obj, 67, 78);
+                            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_24, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_obj_set_style_align(obj, LV_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_label_set_text(obj, "2025-12-11 星期四");
+                        }
+                        {
+                            // weather_city_label
+                            lv_obj_t *obj = lv_label_create(parent_obj);
+                            objects.weather_city_label = obj;
+                            lv_obj_set_pos(obj, 109, 120);
+                            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                            lv_obj_add_event_cb(obj, event_handler_cb_weather_page_weather_city_label, LV_EVENT_ALL, flowState);
+                            lv_obj_add_flag(obj, LV_OBJ_FLAG_CLICKABLE);
+                            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_obj_set_style_align(obj, LV_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_label_set_text(obj, "广州番禺");
+                        }
+                    }
                 }
             }
         }
@@ -331,6 +907,7 @@ void create_screen_weather_page() {
             objects.weather_forecast_panel = obj;
             lv_obj_set_pos(obj, 20, 240);
             lv_obj_set_size(obj, 452, 230);
+            lv_obj_set_scroll_dir(obj, LV_DIR_HOR);
             {
                 lv_obj_t *parent_obj = obj;
                 {
@@ -379,63 +956,81 @@ void create_screen_weather_page() {
                     lv_label_set_text(obj, "后天");
                 }
                 {
+                    // weather_fcst_icon_0_label
                     lv_obj_t *obj = lv_label_create(parent_obj);
+                    objects.weather_fcst_icon_0_label = obj;
                     lv_obj_set_pos(obj, 91, 41);
                     lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
                     lv_obj_set_style_text_font(obj, ui_font_qweather_icons_32, LV_PART_MAIN | LV_STATE_DEFAULT);
                     lv_label_set_text(obj, "");
                 }
                 {
+                    // weather_fcst_icon_1_label
                     lv_obj_t *obj = lv_label_create(parent_obj);
+                    objects.weather_fcst_icon_1_label = obj;
                     lv_obj_set_pos(obj, 91, 98);
                     lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
                     lv_obj_set_style_text_font(obj, ui_font_qweather_icons_32, LV_PART_MAIN | LV_STATE_DEFAULT);
                     lv_label_set_text(obj, "");
                 }
                 {
+                    // weather_fcst_icon_2_label
                     lv_obj_t *obj = lv_label_create(parent_obj);
+                    objects.weather_fcst_icon_2_label = obj;
                     lv_obj_set_pos(obj, 92, 156);
                     lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
                     lv_obj_set_style_text_font(obj, ui_font_qweather_icons_32, LV_PART_MAIN | LV_STATE_DEFAULT);
                     lv_label_set_text(obj, "");
                 }
                 {
+                    // weather_fcst_temp_0_label
                     lv_obj_t *obj = lv_label_create(parent_obj);
+                    objects.weather_fcst_temp_0_label = obj;
                     lv_obj_set_pos(obj, 161, 36);
                     lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
                     lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
                     lv_label_set_text(obj, "24℃-26℃");
                 }
                 {
+                    // weather_fcst_temp_1_label
                     lv_obj_t *obj = lv_label_create(parent_obj);
+                    objects.weather_fcst_temp_1_label = obj;
                     lv_obj_set_pos(obj, 162, 93);
                     lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
                     lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
                     lv_label_set_text(obj, "24℃-26℃");
                 }
                 {
+                    // weather_fcst_temp_2_label
                     lv_obj_t *obj = lv_label_create(parent_obj);
+                    objects.weather_fcst_temp_2_label = obj;
                     lv_obj_set_pos(obj, 162, 146);
                     lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
                     lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
                     lv_label_set_text(obj, "24℃-26℃");
                 }
                 {
+                    // weather_fcst_wind_0_label
                     lv_obj_t *obj = lv_label_create(parent_obj);
+                    objects.weather_fcst_wind_0_label = obj;
                     lv_obj_set_pos(obj, 353, 36);
                     lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
                     lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
                     lv_label_set_text(obj, "南风");
                 }
                 {
+                    // weather_fcst_wind_1_label
                     lv_obj_t *obj = lv_label_create(parent_obj);
+                    objects.weather_fcst_wind_1_label = obj;
                     lv_obj_set_pos(obj, 354, 93);
                     lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
                     lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
                     lv_label_set_text(obj, "南风");
                 }
                 {
+                    // weather_fcst_wind_2_label
                     lv_obj_t *obj = lv_label_create(parent_obj);
+                    objects.weather_fcst_wind_2_label = obj;
                     lv_obj_set_pos(obj, 355, 147);
                     lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
                     lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -444,57 +1039,388 @@ void create_screen_weather_page() {
             }
         }
         {
+            // sys_calendar
             lv_obj_t *obj = lv_calendar_create(parent_obj);
+            objects.sys_calendar = obj;
             lv_obj_set_pos(obj, 487, 240);
             lv_obj_set_size(obj, 358, 230);
             lv_calendar_header_arrow_create(obj);
             lv_calendar_set_today_date(obj, 2022, 11, 1);
             lv_calendar_set_showed_date(obj, 2022, 11);
         }
+        {
+            // weather_city_picker_mask
+            lv_obj_t *obj = lv_obj_create(parent_obj);
+            objects.weather_city_picker_mask = obj;
+            lv_obj_set_pos(obj, 0, 0);
+            lv_obj_set_size(obj, LV_PCT(100), LV_PCT(100));
+            lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(obj, LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_SCROLLABLE);
+            lv_obj_set_style_bg_opa(obj, 150, LV_PART_MAIN | LV_STATE_DEFAULT);
+            {
+                lv_obj_t *parent_obj = obj;
+                {
+                    lv_obj_t *obj = lv_btn_create(parent_obj);
+                    objects.obj4 = obj;
+                    lv_obj_set_pos(obj, 239, 328);
+                    lv_obj_set_size(obj, 100, 50);
+                    lv_obj_add_event_cb(obj, event_handler_cb_weather_page_obj4, LV_EVENT_ALL, flowState);
+                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_24, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    {
+                        lv_obj_t *parent_obj = obj;
+                        {
+                            lv_obj_t *obj = lv_label_create(parent_obj);
+                            lv_obj_set_pos(obj, 0, 0);
+                            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                            lv_obj_set_style_align(obj, LV_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_label_set_text(obj, "取消");
+                        }
+                    }
+                }
+                {
+                    lv_obj_t *obj = lv_btn_create(parent_obj);
+                    objects.obj5 = obj;
+                    lv_obj_set_pos(obj, 492, 328);
+                    lv_obj_set_size(obj, 100, 50);
+                    lv_obj_add_event_cb(obj, event_handler_cb_weather_page_obj5, LV_EVENT_ALL, flowState);
+                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_24, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    {
+                        lv_obj_t *parent_obj = obj;
+                        {
+                            lv_obj_t *obj = lv_label_create(parent_obj);
+                            lv_obj_set_pos(obj, 0, 0);
+                            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                            lv_obj_set_style_align(obj, LV_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_label_set_text(obj, "确定");
+                        }
+                    }
+                }
+                {
+                    lv_obj_t *obj = lv_obj_create(parent_obj);
+                    lv_obj_set_pos(obj, 81, 31);
+                    lv_obj_set_size(obj, LV_PCT(80), LV_PCT(60));
+                    lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+                    {
+                        lv_obj_t *parent_obj = obj;
+                        {
+                            // weather_prov_roller
+                            lv_obj_t *obj = lv_roller_create(parent_obj);
+                            objects.weather_prov_roller = obj;
+                            lv_obj_set_pos(obj, 96, 57);
+                            lv_obj_set_size(obj, LV_SIZE_CONTENT, 100);
+                            lv_roller_set_options(obj, "Option 1\nOption 2\nOption 3", LV_ROLLER_MODE_NORMAL);
+                            lv_obj_add_event_cb(obj, event_handler_cb_weather_page_weather_prov_roller, LV_EVENT_ALL, flowState);
+                            lv_obj_clear_flag(obj, LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR);
+                            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_16, LV_PART_MAIN | LV_STATE_DEFAULT);
+                        }
+                        {
+                            // weather_city_roller
+                            lv_obj_t *obj = lv_roller_create(parent_obj);
+                            objects.weather_city_roller = obj;
+                            lv_obj_set_pos(obj, 273, 58);
+                            lv_obj_set_size(obj, LV_SIZE_CONTENT, 100);
+                            lv_roller_set_options(obj, "Option 1\nOption 2\nOption 3", LV_ROLLER_MODE_NORMAL);
+                            lv_obj_add_event_cb(obj, event_handler_cb_weather_page_weather_city_roller, LV_EVENT_ALL, flowState);
+                            lv_obj_clear_flag(obj, LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR);
+                            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_16, LV_PART_MAIN | LV_STATE_DEFAULT);
+                        }
+                        {
+                            // weather_county_roller
+                            lv_obj_t *obj = lv_roller_create(parent_obj);
+                            objects.weather_county_roller = obj;
+                            lv_obj_set_pos(obj, 450, 57);
+                            lv_obj_set_size(obj, LV_SIZE_CONTENT, 100);
+                            lv_roller_set_options(obj, "Option 1\nOption 2\nOption 3", LV_ROLLER_MODE_NORMAL);
+                            lv_obj_clear_flag(obj, LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR);
+                            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_16, LV_PART_MAIN | LV_STATE_DEFAULT);
+                        }
+                    }
+                }
+            }
+        }
     }
     
     tick_screen_weather_page();
 }
 
+void delete_screen_weather_page() {
+    lv_obj_del(objects.weather_page);
+    objects.weather_page = 0;
+    objects.weather_time_panel = 0;
+    objects.weather_temp_label = 0;
+    objects.weather_wind_label = 0;
+    objects.weather_text_label = 0;
+    objects.weather_icon_label = 0;
+    objects.time_location_panel = 0;
+    objects.weather_time_label = 0;
+    objects.weather_data_label = 0;
+    objects.weather_city_label = 0;
+    objects.weather_forecast_panel = 0;
+    objects.weather_fcst_icon_0_label = 0;
+    objects.weather_fcst_icon_1_label = 0;
+    objects.weather_fcst_icon_2_label = 0;
+    objects.weather_fcst_temp_0_label = 0;
+    objects.weather_fcst_temp_1_label = 0;
+    objects.weather_fcst_temp_2_label = 0;
+    objects.weather_fcst_wind_0_label = 0;
+    objects.weather_fcst_wind_1_label = 0;
+    objects.weather_fcst_wind_2_label = 0;
+    objects.sys_calendar = 0;
+    objects.weather_city_picker_mask = 0;
+    objects.obj4 = 0;
+    objects.obj5 = 0;
+    objects.weather_prov_roller = 0;
+    objects.weather_city_roller = 0;
+    objects.weather_county_roller = 0;
+    deletePageFlowState(4);
+}
+
 void tick_screen_weather_page() {
-    void *flowState = getFlowState(0, 3);
+    void *flowState = getFlowState(0, 4);
     (void)flowState;
 }
 
 void create_screen_sensor_page() {
-    void *flowState = getFlowState(0, 4);
+    void *flowState = getFlowState(0, 5);
     (void)flowState;
     lv_obj_t *obj = lv_obj_create(0);
     objects.sensor_page = obj;
     lv_obj_set_pos(obj, 0, 0);
     lv_obj_set_size(obj, 854, 480);
+    lv_obj_add_event_cb(obj, event_handler_cb_sensor_page_sensor_page, LV_EVENT_ALL, flowState);
+    {
+        lv_obj_t *parent_obj = obj;
+        {
+            // led0_btn
+            lv_obj_t *obj = lv_btn_create(parent_obj);
+            objects.led0_btn = obj;
+            lv_obj_set_pos(obj, 34, 35);
+            lv_obj_set_size(obj, 128, 128);
+            lv_obj_add_flag(obj, LV_OBJ_FLAG_CHECKABLE);
+            lv_obj_set_style_bg_img_src(obj, &img_led, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_24, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_border_width(obj, 5, LV_PART_MAIN | LV_STATE_CHECKED);
+            lv_obj_set_style_border_side(obj, LV_BORDER_SIDE_FULL, LV_PART_MAIN | LV_STATE_CHECKED);
+            lv_obj_set_style_border_color(obj, lv_color_hex(0xffff0000), LV_PART_MAIN | LV_STATE_CHECKED);
+            lv_obj_set_style_bg_color(obj, lv_color_hex(0xff2196f3), LV_PART_MAIN | LV_STATE_CHECKED);
+            {
+                lv_obj_t *parent_obj = obj;
+                {
+                    lv_obj_t *obj = lv_label_create(parent_obj);
+                    lv_obj_set_pos(obj, 0, 45);
+                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                    lv_obj_set_style_align(obj, LV_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_label_set_text(obj, "LED0");
+                }
+            }
+        }
+        {
+            // led1_btn
+            lv_obj_t *obj = lv_btn_create(parent_obj);
+            objects.led1_btn = obj;
+            lv_obj_set_pos(obj, 248, 35);
+            lv_obj_set_size(obj, 128, 128);
+            lv_obj_add_flag(obj, LV_OBJ_FLAG_CHECKABLE);
+            lv_obj_set_style_bg_img_src(obj, &img_led, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_24, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_border_width(obj, 5, LV_PART_MAIN | LV_STATE_CHECKED);
+            lv_obj_set_style_border_side(obj, LV_BORDER_SIDE_FULL, LV_PART_MAIN | LV_STATE_CHECKED);
+            lv_obj_set_style_border_color(obj, lv_color_hex(0xffa600ff), LV_PART_MAIN | LV_STATE_CHECKED);
+            lv_obj_set_style_bg_color(obj, lv_color_hex(0xff2196f3), LV_PART_MAIN | LV_STATE_CHECKED);
+            {
+                lv_obj_t *parent_obj = obj;
+                {
+                    lv_obj_t *obj = lv_label_create(parent_obj);
+                    lv_obj_set_pos(obj, 0, 45);
+                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                    lv_obj_set_style_align(obj, LV_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_label_set_text(obj, "LED1");
+                }
+            }
+        }
+        {
+            // rgb_led_btn
+            lv_obj_t *obj = lv_btn_create(parent_obj);
+            objects.rgb_led_btn = obj;
+            lv_obj_set_pos(obj, 465, 35);
+            lv_obj_set_size(obj, 128, 128);
+            lv_obj_add_flag(obj, LV_OBJ_FLAG_CHECKABLE);
+            lv_obj_set_style_bg_img_src(obj, &img_led, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_24, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_border_width(obj, 5, LV_PART_MAIN | LV_STATE_CHECKED);
+            lv_obj_set_style_border_side(obj, LV_BORDER_SIDE_FULL, LV_PART_MAIN | LV_STATE_CHECKED);
+            lv_obj_set_style_border_color(obj, lv_color_hex(0xffa600ff), LV_PART_MAIN | LV_STATE_CHECKED);
+            lv_obj_set_style_bg_color(obj, lv_color_hex(0xff2196f3), LV_PART_MAIN | LV_STATE_CHECKED);
+            {
+                lv_obj_t *parent_obj = obj;
+                {
+                    lv_obj_t *obj = lv_label_create(parent_obj);
+                    lv_obj_set_pos(obj, 0, 45);
+                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                    lv_obj_set_style_align(obj, LV_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_label_set_text(obj, "RGB LED");
+                }
+            }
+        }
+        {
+            // buzzer_btn
+            lv_obj_t *obj = lv_btn_create(parent_obj);
+            objects.buzzer_btn = obj;
+            lv_obj_set_pos(obj, 692, 35);
+            lv_obj_set_size(obj, 128, 128);
+            lv_obj_add_flag(obj, LV_OBJ_FLAG_CHECKABLE);
+            lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_24, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_bg_img_src(obj, &img_buzzer, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_border_width(obj, 5, LV_PART_MAIN | LV_STATE_CHECKED);
+            lv_obj_set_style_border_side(obj, LV_BORDER_SIDE_FULL, LV_PART_MAIN | LV_STATE_CHECKED);
+            lv_obj_set_style_border_color(obj, lv_color_hex(0xffa600ff), LV_PART_MAIN | LV_STATE_CHECKED);
+            lv_obj_set_style_bg_color(obj, lv_color_hex(0xff2196f3), LV_PART_MAIN | LV_STATE_CHECKED);
+            {
+                lv_obj_t *parent_obj = obj;
+                {
+                    lv_obj_t *obj = lv_label_create(parent_obj);
+                    lv_obj_set_pos(obj, 0, 45);
+                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                    lv_obj_set_style_align(obj, LV_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_label_set_text(obj, "Buzzer");
+                }
+            }
+        }
+        {
+            lv_obj_t *obj = lv_obj_create(parent_obj);
+            lv_obj_set_pos(obj, 34, 248);
+            lv_obj_set_size(obj, 205, 205);
+            {
+                lv_obj_t *parent_obj = obj;
+                {
+                    lv_obj_t *obj = lv_label_create(parent_obj);
+                    lv_obj_set_pos(obj, -2, 58);
+                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_label_set_text(obj, "温度：20℃");
+                }
+                {
+                    // dht11_temp_label
+                    lv_obj_t *obj = lv_label_create(parent_obj);
+                    objects.dht11_temp_label = obj;
+                    lv_obj_set_pos(obj, 29, -6);
+                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_label_set_text(obj, "DHT11");
+                }
+                {
+                    // dht11_humi_label
+                    lv_obj_t *obj = lv_label_create(parent_obj);
+                    objects.dht11_humi_label = obj;
+                    lv_obj_set_pos(obj, 10, 121);
+                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_label_set_text(obj, "湿度：5%");
+                }
+            }
+        }
+        {
+            lv_obj_t *obj = lv_obj_create(parent_obj);
+            lv_obj_set_pos(obj, 315, 248);
+            lv_obj_set_size(obj, 355, 205);
+            {
+                lv_obj_t *parent_obj = obj;
+                {
+                    // mpu6050_temp_label
+                    lv_obj_t *obj = lv_label_create(parent_obj);
+                    objects.mpu6050_temp_label = obj;
+                    lv_obj_set_pos(obj, 69, 149);
+                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_24, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_label_set_text(obj, "TEMP:+000.04");
+                }
+                {
+                    // mpu6050_pitch_label
+                    lv_obj_t *obj = lv_label_create(parent_obj);
+                    objects.mpu6050_pitch_label = obj;
+                    lv_obj_set_pos(obj, 66, 39);
+                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_24, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_label_set_text(obj, "PITCH:+000.04");
+                }
+                {
+                    lv_obj_t *obj = lv_label_create(parent_obj);
+                    lv_obj_set_pos(obj, 81, -6);
+                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_label_set_text(obj, "MPU6050");
+                }
+                {
+                    // mpu6050_roll_label
+                    lv_obj_t *obj = lv_label_create(parent_obj);
+                    objects.mpu6050_roll_label = obj;
+                    lv_obj_set_pos(obj, 72, 78);
+                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_24, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_label_set_text(obj, "ROLL:+000.04");
+                }
+                {
+                    // mpu6050_yaw_label
+                    lv_obj_t *obj = lv_label_create(parent_obj);
+                    objects.mpu6050_yaw_label = obj;
+                    lv_obj_set_pos(obj, 72, 115);
+                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                    lv_obj_set_style_text_font(obj, ui_font_alibaba_pu_hui_ti_24, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_label_set_text(obj, "YAW:+000.04");
+                }
+            }
+        }
+    }
     
     tick_screen_sensor_page();
 }
 
+void delete_screen_sensor_page() {
+    lv_obj_del(objects.sensor_page);
+    objects.sensor_page = 0;
+    objects.led0_btn = 0;
+    objects.led1_btn = 0;
+    objects.rgb_led_btn = 0;
+    objects.buzzer_btn = 0;
+    objects.dht11_temp_label = 0;
+    objects.dht11_humi_label = 0;
+    objects.mpu6050_temp_label = 0;
+    objects.mpu6050_pitch_label = 0;
+    objects.mpu6050_roll_label = 0;
+    objects.mpu6050_yaw_label = 0;
+    deletePageFlowState(5);
+}
+
 void tick_screen_sensor_page() {
-    void *flowState = getFlowState(0, 4);
+    void *flowState = getFlowState(0, 5);
     (void)flowState;
 }
 
 void create_screen_setting_page() {
-    void *flowState = getFlowState(0, 5);
+    void *flowState = getFlowState(0, 6);
     (void)flowState;
     lv_obj_t *obj = lv_obj_create(0);
     objects.setting_page = obj;
     lv_obj_set_pos(obj, 0, 0);
     lv_obj_set_size(obj, 854, 480);
+    lv_obj_add_event_cb(obj, event_handler_cb_setting_page_setting_page, LV_EVENT_ALL, flowState);
     
     tick_screen_setting_page();
 }
 
+void delete_screen_setting_page() {
+    lv_obj_del(objects.setting_page);
+    objects.setting_page = 0;
+    deletePageFlowState(6);
+}
+
 void tick_screen_setting_page() {
-    void *flowState = getFlowState(0, 5);
+    void *flowState = getFlowState(0, 6);
     (void)flowState;
 }
 
 void create_screen_cpu_page() {
-    void *flowState = getFlowState(0, 6);
+    void *flowState = getFlowState(0, 7);
     (void)flowState;
     lv_obj_t *obj = lv_obj_create(0);
     objects.cpu_page = obj;
@@ -504,73 +1430,126 @@ void create_screen_cpu_page() {
     tick_screen_cpu_page();
 }
 
+void delete_screen_cpu_page() {
+    lv_obj_del(objects.cpu_page);
+    objects.cpu_page = 0;
+    deletePageFlowState(7);
+}
+
 void tick_screen_cpu_page() {
-    void *flowState = getFlowState(0, 6);
+    void *flowState = getFlowState(0, 7);
     (void)flowState;
 }
 
 void create_screen_image_page() {
-    void *flowState = getFlowState(0, 7);
+    void *flowState = getFlowState(0, 8);
     (void)flowState;
     lv_obj_t *obj = lv_obj_create(0);
     objects.image_page = obj;
     lv_obj_set_pos(obj, 0, 0);
     lv_obj_set_size(obj, 854, 480);
+    lv_obj_add_event_cb(obj, event_handler_cb_image_page_image_page, LV_EVENT_ALL, flowState);
     
     tick_screen_image_page();
 }
 
+void delete_screen_image_page() {
+    lv_obj_del(objects.image_page);
+    objects.image_page = 0;
+    deletePageFlowState(8);
+}
+
 void tick_screen_image_page() {
-    void *flowState = getFlowState(0, 7);
+    void *flowState = getFlowState(0, 8);
     (void)flowState;
 }
 
 void create_screen_video_page() {
-    void *flowState = getFlowState(0, 8);
+    void *flowState = getFlowState(0, 9);
     (void)flowState;
     lv_obj_t *obj = lv_obj_create(0);
     objects.video_page = obj;
     lv_obj_set_pos(obj, 0, 0);
     lv_obj_set_size(obj, 854, 480);
+    lv_obj_add_event_cb(obj, event_handler_cb_video_page_video_page, LV_EVENT_ALL, flowState);
     
     tick_screen_video_page();
 }
 
+void delete_screen_video_page() {
+    lv_obj_del(objects.video_page);
+    objects.video_page = 0;
+    deletePageFlowState(9);
+}
+
 void tick_screen_video_page() {
-    void *flowState = getFlowState(0, 8);
+    void *flowState = getFlowState(0, 9);
     (void)flowState;
 }
 
 void create_screen_camera_page() {
-    void *flowState = getFlowState(0, 9);
+    void *flowState = getFlowState(0, 10);
     (void)flowState;
     lv_obj_t *obj = lv_obj_create(0);
     objects.camera_page = obj;
     lv_obj_set_pos(obj, 0, 0);
     lv_obj_set_size(obj, 854, 480);
+    lv_obj_add_event_cb(obj, event_handler_cb_camera_page_camera_page, LV_EVENT_ALL, flowState);
     
     tick_screen_camera_page();
 }
 
+void delete_screen_camera_page() {
+    lv_obj_del(objects.camera_page);
+    objects.camera_page = 0;
+    deletePageFlowState(10);
+}
+
 void tick_screen_camera_page() {
-    void *flowState = getFlowState(0, 9);
+    void *flowState = getFlowState(0, 10);
     (void)flowState;
 }
 
-void create_screen_music_page() {
-    void *flowState = getFlowState(0, 10);
-    (void)flowState;
-    lv_obj_t *obj = lv_obj_create(0);
-    objects.music_page = obj;
-    lv_obj_set_pos(obj, 0, 0);
-    lv_obj_set_size(obj, 854, 480);
-    
-    tick_screen_music_page();
+typedef void (*create_screen_func_t)();
+create_screen_func_t create_screen_funcs[] = {
+    create_screen_main,
+    create_screen_p1,
+    create_screen_p2,
+    create_screen_music_page,
+    create_screen_weather_page,
+    create_screen_sensor_page,
+    create_screen_setting_page,
+    create_screen_cpu_page,
+    create_screen_image_page,
+    create_screen_video_page,
+    create_screen_camera_page,
+};
+void create_screen(int screen_index) {
+    create_screen_funcs[screen_index]();
+}
+void create_screen_by_id(enum ScreensEnum screenId) {
+    create_screen_funcs[screenId - 1]();
 }
 
-void tick_screen_music_page() {
-    void *flowState = getFlowState(0, 10);
-    (void)flowState;
+typedef void (*delete_screen_func_t)();
+delete_screen_func_t delete_screen_funcs[] = {
+    delete_screen_main,
+    delete_screen_p1,
+    delete_screen_p2,
+    delete_screen_music_page,
+    delete_screen_weather_page,
+    delete_screen_sensor_page,
+    delete_screen_setting_page,
+    delete_screen_cpu_page,
+    delete_screen_image_page,
+    delete_screen_video_page,
+    delete_screen_camera_page,
+};
+void delete_screen(int screen_index) {
+    delete_screen_funcs[screen_index]();
+}
+void delete_screen_by_id(enum ScreensEnum screenId) {
+    delete_screen_funcs[screenId - 1]();
 }
 
 typedef void (*tick_screen_func_t)();
@@ -578,6 +1557,7 @@ tick_screen_func_t tick_screen_funcs[] = {
     tick_screen_main,
     tick_screen_p1,
     tick_screen_p2,
+    tick_screen_music_page,
     tick_screen_weather_page,
     tick_screen_sensor_page,
     tick_screen_setting_page,
@@ -585,7 +1565,6 @@ tick_screen_func_t tick_screen_funcs[] = {
     tick_screen_image_page,
     tick_screen_video_page,
     tick_screen_camera_page,
-    tick_screen_music_page,
 };
 void tick_screen(int screen_index) {
     tick_screen_funcs[screen_index]();
@@ -788,10 +1767,14 @@ void create_screens() {
     eez_flow_init_screen_names(screen_names, sizeof(screen_names) / sizeof(const char *));
     eez_flow_init_object_names(object_names, sizeof(object_names) / sizeof(const char *));
     
+    eez_flow_set_create_screen_func(create_screen);
+    eez_flow_set_delete_screen_func(delete_screen);
+    
     // Create screens
     create_screen_main();
     create_screen_p1();
     create_screen_p2();
+    create_screen_music_page();
     create_screen_weather_page();
     create_screen_sensor_page();
     create_screen_setting_page();
@@ -799,5 +1782,4 @@ void create_screens() {
     create_screen_image_page();
     create_screen_video_page();
     create_screen_camera_page();
-    create_screen_music_page();
 }

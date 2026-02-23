@@ -13,11 +13,7 @@
 #include <string>
 #include <vector>
 
-static MusicPlayer *s_player = nullptr;
-static Dht11 *s_dht11 = nullptr;
-static Backlight *s_backlight = nullptr;
-static WeatherService *s_weatherService = nullptr;
-static IRDevice *s_irDevice = nullptr;
+static IRDevice* s_irDevice = nullptr;
 
 // 红外学习回调
 static IRLearnCompleteCallback s_irLearnCompleteCallback = nullptr;
@@ -30,31 +26,16 @@ static IRLearnStatusCallback s_irStatusCallback = nullptr;
  */
 int bridge_init(void)
 {
-    s_player = new (std::nothrow) MusicPlayer();
-    if (!s_player)
-    {
-        std::cerr << "[Bridge] Failed to create MusicPlayer" << std::endl;
-        return -1;
-    }
-
-    s_dht11 = new (std::nothrow) Dht11(APP_DEV_DHT11);
-    if (!s_dht11 || !s_dht11->open())
+    // Dht11、Backlight、WeatherService、MusicPlayer 都是单例模式
+    // 在首次 getInstance() 时自动初始化
+    if (!Dht11::getInstance().open())
     {
         std::cerr << "[Bridge] Failed to init DHT11" << std::endl;
     }
 
-    s_backlight = new (std::nothrow) Backlight(APP_DEV_BACKLIGHT);
-    if (!s_backlight)
-    {
-        std::cerr << "[Bridge] Failed to create Backlight" << std::endl;
-    }
-
-    s_weatherService = new (std::nothrow) WeatherService(APP_WEATHER_API_KEY);
-    if (!s_weatherService)
-    {
-        std::cerr << "[Bridge] Failed to create WeatherService" << std::endl;
-        return -1;
-    }
+    std::cout << "[Bridge] DHT11 ready (singleton)" << std::endl;
+    std::cout << "[Bridge] Backlight ready (singleton)" << std::endl;
+    std::cout << "[Bridge] WeatherService ready (singleton)" << std::endl;
 
     // 初始化红外学习模块（使用单例，与DeviceService共享）
     s_irDevice = &IRDevice::getInstance();
@@ -63,23 +44,28 @@ int bridge_init(void)
         std::cout << "[Bridge] IR device initialized (singleton): " << APP_DEV_IR << std::endl;
 
         // 设置回调
-        s_irDevice->setOnLearnComplete([](const IRCode &code) {
-            if (s_irLearnCompleteCallback)
+        s_irDevice->setOnLearnComplete(
+            [](const IRCode& code)
             {
-                s_irLearnCompleteCallback(code.index, code.data.data(), code.data.size());
-            }
-        });
+                if (s_irLearnCompleteCallback)
+                {
+                    s_irLearnCompleteCallback(code.index, code.data.data(), code.data.size());
+                }
+            });
 
-        s_irDevice->setOnStatusChange([](IRLearnStatus status) {
-            if (s_irStatusCallback)
+        s_irDevice->setOnStatusChange(
+            [](IRLearnStatus status)
             {
-                s_irStatusCallback(static_cast<int>(status));
-            }
-        });
+                if (s_irStatusCallback)
+                {
+                    s_irStatusCallback(static_cast<int>(status));
+                }
+            });
     }
     else
     {
-        std::cerr << "[Bridge] Warning: Failed to init IR device (optional), isOpen=" << s_irDevice->isOpen() << std::endl;
+        std::cerr << "[Bridge] Warning: Failed to init IR device (optional), isOpen=" << s_irDevice->isOpen()
+                  << std::endl;
         // 红外模块失败不影响整体初始化
     }
 
@@ -93,20 +79,10 @@ int bridge_init(void)
  */
 void bridge_deinit(void)
 {
-    // s_irDevice 是单例，不要 delete，由 DeviceService 关闭
     s_irDevice = nullptr;
 
-    delete s_weatherService;
-    s_weatherService = nullptr;
-
-    delete s_backlight;
-    s_backlight = nullptr;
-
-    delete s_dht11;
-    s_dht11 = nullptr;
-
-    delete s_player;
-    s_player = nullptr;
+    // Dht11、Backlight、WeatherService、MusicPlayer 都是单例
+    // 不需要手动删除，程序结束时自动销毁
 
     std::cout << "[Bridge] Deinitialized" << std::endl;
 }
@@ -116,16 +92,14 @@ void bridge_deinit(void)
  * @param path 音乐目录路径
  * @details 扫描指定目录下的音乐文件并加载第一首
  */
-void bridge_music_scan_dir(const char *path)
+void bridge_music_scan_dir(const char* path)
 {
-    if (!s_player)
-        return;
     std::cout << "[Bridge] Scan music directory: " << path << std::endl;
-    s_player->scanDirectory(path);
+    MusicPlayer::getInstance().scanDirectory(path);
 
-    if (!s_player->getPlaylist().empty())
+    if (!MusicPlayer::getInstance().getPlaylist().empty())
     {
-        s_player->loadMusic(0);
+        MusicPlayer::getInstance().loadMusic(0);
     }
 }
 
@@ -135,20 +109,20 @@ void bridge_music_scan_dir(const char *path)
  * @return char** 歌曲名称数组,需要调用bridge_free_music_playlist释放
  * @details 扫描默认音乐目录并返回播放列表
  */
-char **bridge_get_music_playlist(size_t *out_count)
+char** bridge_get_music_playlist(size_t* out_count)
 {
     bridge_music_scan_dir(APP_MUSIC_DIR);
 
-    std::vector<std::string> playlist = s_player->getPlaylist();
+    std::vector<std::string> playlist = MusicPlayer::getInstance().getPlaylist();
     *out_count = playlist.size();
 
     if (playlist.empty())
         return nullptr;
 
-    char **c_array = (char **)std::malloc(playlist.size() * sizeof(char *));
+    char** c_array = (char**) std::malloc(playlist.size() * sizeof(char*));
     for (size_t i = 0; i < playlist.size(); ++i)
     {
-        c_array[i] = (char *)std::malloc(playlist[i].size() + 1);
+        c_array[i] = (char*) std::malloc(playlist[i].size() + 1);
         std::strcpy(c_array[i], playlist[i].c_str());
     }
     return c_array;
@@ -159,7 +133,7 @@ char **bridge_get_music_playlist(size_t *out_count)
  * @param playlist 播放列表数组
  * @param count 歌曲数量
  */
-void bridge_free_music_playlist(char **playlist, size_t count)
+void bridge_free_music_playlist(char** playlist, size_t count)
 {
     if (playlist == nullptr)
         return;
@@ -176,10 +150,8 @@ void bridge_free_music_playlist(char **playlist, size_t count)
  */
 void bridge_music_play(void)
 {
-    if (!s_player)
-        return;
     std::cout << "[Bridge] Play music" << std::endl;
-    s_player->play();
+    MusicPlayer::getInstance().play();
 }
 
 /**
@@ -187,10 +159,8 @@ void bridge_music_play(void)
  */
 void bridge_music_pause(void)
 {
-    if (!s_player)
-        return;
     std::cout << "[Bridge] Pause music" << std::endl;
-    s_player->pause();
+    MusicPlayer::getInstance().pause();
 }
 
 /**
@@ -198,10 +168,8 @@ void bridge_music_pause(void)
  */
 void bridge_music_prev(void)
 {
-    if (!s_player)
-        return;
     std::cout << "[Bridge] Prev music" << std::endl;
-    s_player->prev();
+    MusicPlayer::getInstance().prev();
 }
 
 /**
@@ -209,10 +177,8 @@ void bridge_music_prev(void)
  */
 void bridge_music_next(void)
 {
-    if (!s_player)
-        return;
     std::cout << "[Bridge] Next music" << std::endl;
-    s_player->next();
+    MusicPlayer::getInstance().next();
 }
 
 /**
@@ -221,9 +187,7 @@ void bridge_music_next(void)
  */
 double bridge_music_current_time(void)
 {
-    if (!s_player)
-        return 0.0;
-    return s_player->getMusicCurrentTime();
+    return MusicPlayer::getInstance().getMusicCurrentTime();
 }
 
 /**
@@ -232,21 +196,17 @@ double bridge_music_current_time(void)
  */
 double bridge_music_duration(void)
 {
-    if (!s_player)
-        return 0.0;
-    return s_player->getMusicDuration();
+    return MusicPlayer::getInstance().getMusicDuration();
 }
 
 /**
  * @brief 获取当前歌曲名称
  * @return char* 歌曲名称字符串,需要调用者free释放
  */
-char *bridge_current_music_name(void)
+char* bridge_current_music_name(void)
 {
-    if (!s_player)
-        return nullptr;
-    std::string music_name = s_player->getCurrentSongName();
-    char *c_str = (char *)std::malloc(music_name.size() + 1);
+    std::string music_name = MusicPlayer::getInstance().getCurrentSongName();
+    char* c_str = (char*) std::malloc(music_name.size() + 1);
     std::strcpy(c_str, music_name.c_str());
     return c_str;
 }
@@ -255,12 +215,10 @@ char *bridge_current_music_name(void)
  * @brief 获取当前歌曲歌词
  * @return char* 歌词字符串,需要调用者free释放
  */
-char *bridge_current_song_lyrics(void)
+char* bridge_current_song_lyrics(void)
 {
-    if (!s_player)
-        return nullptr;
-    std::string lyrics = s_player->getCurrentSongLyrics();
-    char *c_str = (char *)std::malloc(lyrics.size() + 1);
+    std::string lyrics = MusicPlayer::getInstance().getCurrentSongLyrics();
+    char* c_str = (char*) std::malloc(lyrics.size() + 1);
     std::strcpy(c_str, lyrics.c_str());
     return c_str;
 }
@@ -269,13 +227,11 @@ char *bridge_current_song_lyrics(void)
  * @brief 获取当前时间对应的歌词行
  * @return char* 当前歌词行字符串,需要调用者free释放
  */
-char *bridge_get_current_lyric_line(void)
+char* bridge_get_current_lyric_line(void)
 {
-    if (!s_player)
-        return nullptr;
-    double time = s_player->getMusicCurrentTime();
-    std::string line = s_player->getCurrentLyricLine(time);
-    char *c_str = (char *)std::malloc(line.size() + 1);
+    double time = MusicPlayer::getInstance().getMusicCurrentTime();
+    std::string line = MusicPlayer::getInstance().getCurrentLyricLine(time);
+    char* c_str = (char*) std::malloc(line.size() + 1);
     std::strcpy(c_str, line.c_str());
     return c_str;
 }
@@ -284,14 +240,12 @@ char *bridge_get_current_lyric_line(void)
  * @brief 获取当前歌曲专辑封面路径
  * @return char* 封面图片路径,需要调用者free释放;无封面返回nullptr
  */
-char *bridge_get_current_album_cover_path(void)
+char* bridge_get_current_album_cover_path(void)
 {
-    if (!s_player)
-        return nullptr;
-    std::string path = s_player->getCurrentAlbumCoverPath();
+    std::string path = MusicPlayer::getInstance().getCurrentAlbumCoverPath();
     if (path.empty())
         return nullptr;
-    char *c_str = (char *)std::malloc(path.size() + 1);
+    char* c_str = (char*) std::malloc(path.size() + 1);
     std::strcpy(c_str, path.c_str());
     return c_str;
 }
@@ -302,9 +256,7 @@ char *bridge_get_current_album_cover_path(void)
  */
 void bridge_set_volume(long volume)
 {
-    if (!s_player)
-        return;
-    s_player->setVolume(volume);
+    MusicPlayer::getInstance().setVolume(volume);
 }
 
 /**
@@ -313,10 +265,8 @@ void bridge_set_volume(long volume)
  */
 void bridge_update_weather(void)
 {
-    if (!s_weatherService)
-        return;
     std::cout << "[Bridge] Update weather (Default: " APP_DEFAULT_CITY ")" << std::endl;
-    s_weatherService->updateWeatherAsync(APP_DEFAULT_CITY);
+    WeatherService::getInstance().updateAsync(APP_DEFAULT_CITY);
 }
 
 /**
@@ -324,101 +274,104 @@ void bridge_update_weather(void)
  * @param city 城市名称
  * @details 异步获取指定城市的天气数据
  */
-void bridge_update_weather_city(const char *city)
+void bridge_update_weather_city(const char* city)
 {
-    if (!s_weatherService)
-        return;
     if (city && strlen(city) > 0)
     {
         std::cout << "[Bridge] Update weather for city: " << city << std::endl;
-        s_weatherService->updateWeatherAsync(city);
+        WeatherService::getInstance().updateAsync(city);
     }
 }
 
 /**
  * @brief 获取天气数据
  * @param data 输出参数,存储天气数据结构
- * @details 将C++ WeatherData转换为C语言AppWeatherData结构
+ * @details 将C++ WeatherService数据转换为C语言AppWeatherData结构
  */
-void bridge_get_weather_data(AppWeatherData *data)
+void bridge_get_weather_data(AppWeatherData* data)
 {
     if (!data)
         return;
-    if (!s_weatherService)
-        return;
 
-    WeatherData cppData = s_weatherService->getWeatherData();
+    WeatherService& service = WeatherService::getInstance();
+    CurrentWeather current = service.getCurrent();
+    std::vector<ForecastWeather> forecast = service.getForecast();
 
-    strncpy(data->city, cppData.city, sizeof(data->city) - 1);
+    strncpy(data->city, current.city.c_str(), sizeof(data->city) - 1);
     data->city[sizeof(data->city) - 1] = '\0';
 
-    strncpy(data->weather, cppData.weather, sizeof(data->weather) - 1);
+    strncpy(data->weather, current.description.c_str(), sizeof(data->weather) - 1);
     data->weather[sizeof(data->weather) - 1] = '\0';
 
-    data->iconCode = cppData.iconCode;
-    data->temperature = cppData.temperature;
-    data->humidity = cppData.humidity;
-    data->feelsLike = cppData.feelsLike;
+    data->iconCode = current.iconCode;
+    data->temperature = current.temperature;
+    data->humidity = current.humidity;
+    data->feelsLike = current.feelsLike;
 
-    strncpy(data->windDir, cppData.windDir, sizeof(data->windDir) - 1);
+    strncpy(data->windDir, current.windDir.c_str(), sizeof(data->windDir) - 1);
     data->windDir[sizeof(data->windDir) - 1] = '\0';
 
-    data->windSpeed = cppData.windSpeed;
+    data->windSpeed = current.windSpeed;
 
-    data->day1_iconCode = cppData.day1_iconCode;
-    data->day1_tempMin = cppData.day1_tempMin;
-    data->day1_tempMax = cppData.day1_tempMax;
-    strncpy(data->day1_windDir, cppData.day1_windDir, sizeof(data->day1_windDir) - 1);
-    data->day1_windDir[sizeof(data->day1_windDir) - 1] = '\0';
-    strncpy(data->day1_fxDate, cppData.day1_fxDate, sizeof(data->day1_fxDate) - 1);
-    data->day1_fxDate[sizeof(data->day1_fxDate) - 1] = '\0';
+    // 填充预报数据
+    if (forecast.size() > 0)
+    {
+        data->day1_iconCode = forecast[0].iconCode;
+        data->day1_tempMin = forecast[0].tempMin;
+        data->day1_tempMax = forecast[0].tempMax;
+        strncpy(data->day1_windDir, forecast[0].windDir.c_str(), sizeof(data->day1_windDir) - 1);
+        data->day1_windDir[sizeof(data->day1_windDir) - 1] = '\0';
+        strncpy(data->day1_fxDate, forecast[0].date.c_str(), sizeof(data->day1_fxDate) - 1);
+        data->day1_fxDate[sizeof(data->day1_fxDate) - 1] = '\0';
+    }
 
-    data->day2_iconCode = cppData.day2_iconCode;
-    data->day2_tempMin = cppData.day2_tempMin;
-    data->day2_tempMax = cppData.day2_tempMax;
-    strncpy(data->day2_windDir, cppData.day2_windDir, sizeof(data->day2_windDir) - 1);
-    data->day2_windDir[sizeof(data->day2_windDir) - 1] = '\0';
+    if (forecast.size() > 1)
+    {
+        data->day2_iconCode = forecast[1].iconCode;
+        data->day2_tempMin = forecast[1].tempMin;
+        data->day2_tempMax = forecast[1].tempMax;
+        strncpy(data->day2_windDir, forecast[1].windDir.c_str(), sizeof(data->day2_windDir) - 1);
+        data->day2_windDir[sizeof(data->day2_windDir) - 1] = '\0';
+    }
 
-    data->day3_iconCode = cppData.day3_iconCode;
-    data->day3_tempMin = cppData.day3_tempMin;
-    data->day3_tempMax = cppData.day3_tempMax;
-    strncpy(data->day3_windDir, cppData.day3_windDir, sizeof(data->day3_windDir) - 1);
-    data->day3_windDir[sizeof(data->day3_windDir) - 1] = '\0';
+    if (forecast.size() > 2)
+    {
+        data->day3_iconCode = forecast[2].iconCode;
+        data->day3_tempMin = forecast[2].tempMin;
+        data->day3_tempMax = forecast[2].tempMax;
+        strncpy(data->day3_windDir, forecast[2].windDir.c_str(), sizeof(data->day3_windDir) - 1);
+        data->day3_windDir[sizeof(data->day3_windDir) - 1] = '\0';
+    }
 }
 
 /**
  * @brief 读取温度(兼容接口)
  * @return int 温度值(摄氏度)
- * @details 使用全局DHT11实例读取温度
+ * @details 使用 DHT11 单例读取温度
  */
 int bridge_get_temp(void)
 {
-    if (!s_dht11)
-        return 0;
-    return s_dht11->readTemperature();
+    return Dht11::getInstance().readTemperature();
 }
 
 /**
  * @brief 读取湿度(兼容接口)
  * @return int 湿度值(%)
- * @details 使用全局DHT11实例读取湿度
+ * @details 使用 DHT11 单例读取湿度
  */
 int bridge_get_humi(void)
 {
-    if (!s_dht11)
-        return 0;
-    return s_dht11->readHumidity();
+    return Dht11::getInstance().readHumidity();
 }
 
 /**
  * @brief 设置屏幕亮度
  * @param level 亮度等级(0-100)
+ * @details 使用 Backlight 单例设置亮度
  */
 void bridge_set_brightness(int level)
 {
-    if (!s_backlight)
-        return;
-    s_backlight->setBrightness(level);
+    Backlight::getInstance().setBrightness(level);
 }
 
 /**
@@ -445,7 +398,7 @@ void bridge_device_deinit(void)
  * @param gpioPath GPIO设备路径
  * @return 0 成功, -1 失败
  */
-int bridge_led_add(const char *deviceId, const char *gpioPath)
+int bridge_led_add(const char* deviceId, const char* gpioPath)
 {
     if (!deviceId || !gpioPath)
         return -1;
@@ -458,7 +411,7 @@ int bridge_led_add(const char *deviceId, const char *gpioPath)
  * @param deviceId 设备唯一标识符
  * @return 0 成功, -1 失败
  */
-int bridge_led_remove(const char *deviceId)
+int bridge_led_remove(const char* deviceId)
 {
     if (!deviceId)
         return -1;
@@ -471,7 +424,7 @@ int bridge_led_remove(const char *deviceId)
  * @param deviceId 设备唯一标识符
  * @return 0 成功, -1 失败
  */
-int bridge_led_set_on(const char *deviceId)
+int bridge_led_set_on(const char* deviceId)
 {
     if (!deviceId)
         return -1;
@@ -484,7 +437,7 @@ int bridge_led_set_on(const char *deviceId)
  * @param deviceId 设备唯一标识符
  * @return 0 成功, -1 失败
  */
-int bridge_led_set_off(const char *deviceId)
+int bridge_led_set_off(const char* deviceId)
 {
     if (!deviceId)
         return -1;
@@ -497,7 +450,7 @@ int bridge_led_set_off(const char *deviceId)
  * @param deviceId 设备唯一标识符
  * @return 0 成功, -1 失败
  */
-int bridge_led_toggle(const char *deviceId)
+int bridge_led_toggle(const char* deviceId)
 {
     if (!deviceId)
         return -1;
@@ -510,7 +463,7 @@ int bridge_led_toggle(const char *deviceId)
  * @param deviceId 设备唯一标识符
  * @return 1 打开, 0 关闭或设备不存在
  */
-int bridge_led_get_state(const char *deviceId)
+int bridge_led_get_state(const char* deviceId)
 {
     if (!deviceId)
         return 0;
@@ -524,7 +477,7 @@ int bridge_led_get_state(const char *deviceId)
  * @param gpioPath GPIO设备路径
  * @return 0 成功, -1 失败
  */
-int bridge_buzzer_add(const char *deviceId, const char *gpioPath)
+int bridge_buzzer_add(const char* deviceId, const char* gpioPath)
 {
     if (!deviceId || !gpioPath)
         return -1;
@@ -537,7 +490,7 @@ int bridge_buzzer_add(const char *deviceId, const char *gpioPath)
  * @param deviceId 设备唯一标识符
  * @return 0 成功, -1 失败
  */
-int bridge_buzzer_on(const char *deviceId)
+int bridge_buzzer_on(const char* deviceId)
 {
     if (!deviceId)
         return -1;
@@ -550,7 +503,7 @@ int bridge_buzzer_on(const char *deviceId)
  * @param deviceId 设备唯一标识符
  * @return 0 成功, -1 失败
  */
-int bridge_buzzer_off(const char *deviceId)
+int bridge_buzzer_off(const char* deviceId)
 {
     if (!deviceId)
         return -1;
@@ -564,7 +517,7 @@ int bridge_buzzer_off(const char *deviceId)
  * @param durationMs 响铃持续时间(毫秒)
  * @return 0 成功, -1 失败
  */
-int bridge_buzzer_beep(const char *deviceId, int durationMs)
+int bridge_buzzer_beep(const char* deviceId, int durationMs)
 {
     if (!deviceId)
         return -1;
@@ -580,7 +533,7 @@ int bridge_buzzer_beep(const char *deviceId, int durationMs)
  * @param count 响声次数
  * @return 0 成功, -1 失败
  */
-int bridge_buzzer_beep_pattern(const char *deviceId, int onMs, int offMs, int count)
+int bridge_buzzer_beep_pattern(const char* deviceId, int onMs, int offMs, int count)
 {
     if (!deviceId)
         return -1;
@@ -594,7 +547,7 @@ int bridge_buzzer_beep_pattern(const char *deviceId, int onMs, int offMs, int co
  * @param devPath 设备文件路径
  * @return 0 成功, -1 失败
  */
-int bridge_dht11_add(const char *deviceId, const char *devPath)
+int bridge_dht11_add(const char* deviceId, const char* devPath)
 {
     if (!deviceId || !devPath)
         return -1;
@@ -607,7 +560,7 @@ int bridge_dht11_add(const char *deviceId, const char *devPath)
  * @param deviceId 设备唯一标识符
  * @return int 温度值(摄氏度),失败返回0
  */
-int bridge_dht11_get_temp(const char *deviceId)
+int bridge_dht11_get_temp(const char* deviceId)
 {
     if (!deviceId)
         return 0;
@@ -620,7 +573,7 @@ int bridge_dht11_get_temp(const char *deviceId)
  * @param deviceId 设备唯一标识符
  * @return int 湿度值(%),失败返回0
  */
-int bridge_dht11_get_humi(const char *deviceId)
+int bridge_dht11_get_humi(const char* deviceId)
 {
     if (!deviceId)
         return 0;
@@ -653,7 +606,7 @@ void bridge_sensor_report_once(void)
  * @param clientId 客户端ID(可为NULL,使用默认值)
  * @return 0 成功, -1 失败
  */
-int bridge_mqtt_connect(const char *host, int port, const char *clientId)
+int bridge_mqtt_connect(const char* host, int port, const char* clientId)
 {
     if (!host)
         return -1;
@@ -684,7 +637,7 @@ int bridge_mqtt_is_connected(void)
  * @param devPath 串口设备路径,如"/dev/ttyS1"
  * @return 0 成功, -1 失败
  */
-int bridge_ir_init(const char *devPath)
+int bridge_ir_init(const char* devPath)
 {
     if (!devPath)
         return -1;
@@ -711,19 +664,23 @@ int bridge_ir_init(const char *devPath)
     }
 
     // 设置回调
-    s_irDevice->setOnLearnComplete([](const IRCode &code) {
-        if (s_irLearnCompleteCallback)
+    s_irDevice->setOnLearnComplete(
+        [](const IRCode& code)
         {
-            s_irLearnCompleteCallback(code.index, code.data.data(), code.data.size());
-        }
-    });
+            if (s_irLearnCompleteCallback)
+            {
+                s_irLearnCompleteCallback(code.index, code.data.data(), code.data.size());
+            }
+        });
 
-    s_irDevice->setOnStatusChange([](IRLearnStatus status) {
-        if (s_irStatusCallback)
+    s_irDevice->setOnStatusChange(
+        [](IRLearnStatus status)
         {
-            s_irStatusCallback(static_cast<int>(status));
-        }
-    });
+            if (s_irStatusCallback)
+            {
+                s_irStatusCallback(static_cast<int>(status));
+            }
+        });
 
     std::cout << "[Bridge] IR device initialized: " << devPath << std::endl;
     return 0;
@@ -803,7 +760,7 @@ int bridge_ir_emit(uint8_t index)
  * @param len 数据长度
  * @return 0 成功, -1 失败
  */
-int bridge_ir_emit_raw(const uint8_t *data, size_t len)
+int bridge_ir_emit_raw(const uint8_t* data, size_t len)
 {
     if (!s_irDevice || !data || len == 0)
     {
@@ -870,7 +827,7 @@ static IRExtLearnSaveCallback s_irExtLearnSaveCallback = nullptr;
 static std::string s_extLearnDeviceName;
 static std::string s_extLearnCommandName;
 
-int bridge_ir_cmd_init(const char *dataPath)
+int bridge_ir_cmd_init(const char* dataPath)
 {
     std::string path = dataPath ? dataPath : "/data/ir_commands";
     return IRCommandManager::getInstance().init(path) ? 0 : -1;
@@ -881,7 +838,7 @@ void bridge_ir_cmd_deinit(void)
     IRCommandManager::getInstance().deinit();
 }
 
-int bridge_ir_cmd_add(const char *deviceName, const char *commandName, const uint8_t *data, size_t len)
+int bridge_ir_cmd_add(const char* deviceName, const char* commandName, const uint8_t* data, size_t len)
 {
     if (!deviceName || !commandName || !data || len == 0)
         return -1;
@@ -890,7 +847,7 @@ int bridge_ir_cmd_add(const char *deviceName, const char *commandName, const uin
     return IRCommandManager::getInstance().addCommand(deviceName, commandName, code) ? 0 : -1;
 }
 
-int bridge_ir_cmd_remove(const char *deviceName, const char *commandName)
+int bridge_ir_cmd_remove(const char* deviceName, const char* commandName)
 {
     if (!deviceName || !commandName)
         return -1;
@@ -898,7 +855,7 @@ int bridge_ir_cmd_remove(const char *deviceName, const char *commandName)
     return IRCommandManager::getInstance().removeCommand(deviceName, commandName) ? 0 : -1;
 }
 
-int bridge_ir_cmd_remove_device(const char *deviceName)
+int bridge_ir_cmd_remove_device(const char* deviceName)
 {
     if (!deviceName)
         return -1;
@@ -906,7 +863,7 @@ int bridge_ir_cmd_remove_device(const char *deviceName)
     return IRCommandManager::getInstance().removeDevice(deviceName) ? 0 : -1;
 }
 
-int bridge_ir_cmd_emit(const char *deviceName, const char *commandName)
+int bridge_ir_cmd_emit(const char* deviceName, const char* commandName)
 {
     if (!deviceName || !commandName)
         return -1;
@@ -914,7 +871,7 @@ int bridge_ir_cmd_emit(const char *deviceName, const char *commandName)
     return IRCommandManager::getInstance().emitCommand(deviceName, commandName) ? 0 : -1;
 }
 
-int bridge_ir_cmd_get(const char *deviceName, const char *commandName, uint8_t *outData, size_t *inOutLen)
+int bridge_ir_cmd_get(const char* deviceName, const char* commandName, uint8_t* outData, size_t* inOutLen)
 {
     if (!deviceName || !commandName || !inOutLen)
         return -1;
@@ -931,7 +888,7 @@ int bridge_ir_cmd_get(const char *deviceName, const char *commandName, uint8_t *
     return 0;
 }
 
-char **bridge_ir_cmd_get_devices(size_t *outCount)
+char** bridge_ir_cmd_get_devices(size_t* outCount)
 {
     if (!outCount)
         return nullptr;
@@ -942,16 +899,16 @@ char **bridge_ir_cmd_get_devices(size_t *outCount)
     if (devices.empty())
         return nullptr;
 
-    char **c_array = (char **)std::malloc(devices.size() * sizeof(char *));
+    char** c_array = (char**) std::malloc(devices.size() * sizeof(char*));
     for (size_t i = 0; i < devices.size(); ++i)
     {
-        c_array[i] = (char *)std::malloc(devices[i].size() + 1);
+        c_array[i] = (char*) std::malloc(devices[i].size() + 1);
         std::strcpy(c_array[i], devices[i].c_str());
     }
     return c_array;
 }
 
-void bridge_ir_cmd_free_devices(char **devices, size_t count)
+void bridge_ir_cmd_free_devices(char** devices, size_t count)
 {
     if (devices == nullptr)
         return;
@@ -963,7 +920,7 @@ void bridge_ir_cmd_free_devices(char **devices, size_t count)
     std::free(devices);
 }
 
-char **bridge_ir_cmd_get_commands(const char *deviceName, size_t *outCount)
+char** bridge_ir_cmd_get_commands(const char* deviceName, size_t* outCount)
 {
     if (!deviceName || !outCount)
         return nullptr;
@@ -974,16 +931,16 @@ char **bridge_ir_cmd_get_commands(const char *deviceName, size_t *outCount)
     if (commands.empty())
         return nullptr;
 
-    char **c_array = (char **)std::malloc(commands.size() * sizeof(char *));
+    char** c_array = (char**) std::malloc(commands.size() * sizeof(char*));
     for (size_t i = 0; i < commands.size(); ++i)
     {
-        c_array[i] = (char *)std::malloc(commands[i].size() + 1);
+        c_array[i] = (char*) std::malloc(commands[i].size() + 1);
         std::strcpy(c_array[i], commands[i].c_str());
     }
     return c_array;
 }
 
-void bridge_ir_cmd_free_commands(char **commands, size_t count)
+void bridge_ir_cmd_free_commands(char** commands, size_t count)
 {
     if (commands == nullptr)
         return;
@@ -995,7 +952,7 @@ void bridge_ir_cmd_free_commands(char **commands, size_t count)
     std::free(commands);
 }
 
-int bridge_ir_cmd_exists(const char *deviceName, const char *commandName)
+int bridge_ir_cmd_exists(const char* deviceName, const char* commandName)
 {
     if (!deviceName || !commandName)
         return 0;
@@ -1003,7 +960,7 @@ int bridge_ir_cmd_exists(const char *deviceName, const char *commandName)
     return IRCommandManager::getInstance().commandExists(deviceName, commandName) ? 1 : 0;
 }
 
-int bridge_ir_ext_learn_and_save(const char *deviceName, const char *commandName, IRExtLearnSaveCallback callback)
+int bridge_ir_ext_learn_and_save(const char* deviceName, const char* commandName, IRExtLearnSaveCallback callback)
 {
     if (!deviceName || !commandName || !s_irDevice)
         return -1;
@@ -1012,23 +969,25 @@ int bridge_ir_ext_learn_and_save(const char *deviceName, const char *commandName
     s_extLearnCommandName = commandName;
     s_irExtLearnSaveCallback = callback;
 
-    s_irDevice->setOnExtLearnComplete([](const std::vector<uint8_t> &data) {
-        if (!data.empty())
+    s_irDevice->setOnExtLearnComplete(
+        [](const std::vector<uint8_t>& data)
         {
-            IRCommandManager::getInstance().addCommand(s_extLearnDeviceName, s_extLearnCommandName, data);
-            if (s_irExtLearnSaveCallback)
+            if (!data.empty())
             {
-                s_irExtLearnSaveCallback(1, s_extLearnDeviceName.c_str(), s_extLearnCommandName.c_str());
+                IRCommandManager::getInstance().addCommand(s_extLearnDeviceName, s_extLearnCommandName, data);
+                if (s_irExtLearnSaveCallback)
+                {
+                    s_irExtLearnSaveCallback(1, s_extLearnDeviceName.c_str(), s_extLearnCommandName.c_str());
+                }
             }
-        }
-        else
-        {
-            if (s_irExtLearnSaveCallback)
+            else
             {
-                s_irExtLearnSaveCallback(0, s_extLearnDeviceName.c_str(), s_extLearnCommandName.c_str());
+                if (s_irExtLearnSaveCallback)
+                {
+                    s_irExtLearnSaveCallback(0, s_extLearnDeviceName.c_str(), s_extLearnCommandName.c_str());
+                }
             }
-        }
-    });
+        });
 
     return s_irDevice->startExtLearn() ? 0 : -1;
 }
