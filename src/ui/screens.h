@@ -37,6 +37,7 @@ typedef struct _objects_t {
     lv_obj_t *image_page;
     lv_obj_t *video_page;
     lv_obj_t *camera_page;
+    lv_obj_t *main_time_label;
     lv_obj_t *setting_btn;
     lv_obj_t *weather_btn;
     lv_obj_t *sensor_btn;
@@ -96,6 +97,24 @@ typedef struct _objects_t {
     lv_obj_t *mpu6050_pitch_label;
     lv_obj_t *mpu6050_roll_label;
     lv_obj_t *mpu6050_yaw_label;
+    lv_obj_t *obj6;
+    lv_obj_t *left_menu_panel;
+    lv_obj_t *setting_lightness_btn;
+    lv_obj_t *setting_sound_btn;
+    lv_obj_t *setting_wifi_btn;
+    lv_obj_t *wifi_content_area;
+    lv_obj_t *wifi_switch;
+    lv_obj_t *connected_wifi_info_label;
+    lv_obj_t *wifi_list_panel;
+    lv_obj_t *lightness_content_area;
+    lv_obj_t *setting_lightness_slider;
+    lv_obj_t *sound_content_area;
+    lv_obj_t *setting_sound_slider;
+    lv_obj_t *setting_wifi_secret_picker_mask;
+    lv_obj_t *obj7;
+    lv_obj_t *obj8;
+    lv_obj_t *setting_wifi_secret;
+    lv_obj_t *setting_keyboard;
 } objects_t;
 
 extern objects_t objects;

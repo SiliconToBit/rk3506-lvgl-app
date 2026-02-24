@@ -12,6 +12,7 @@
 #include <cstdio>
 #include <iostream>
 #include <string>
+#include <unistd.h>
 
 namespace
 {
@@ -23,6 +24,7 @@ namespace
     bool g_slider_syncing = false;              // 标记是否正在同步滑块值（防止事件循环）
     std::vector<lv_obj_t*> g_song_buttons;      // 歌曲列表按钮容器
     int g_last_minute = -1;                     // 上次更新的分钟数，用于检测分钟变化
+    std::string g_selected_wifi_ssid;           // 当前选中的WiFi SSID
 
     // 前置声明
     void refresh_music_page_ui();
@@ -789,5 +791,359 @@ extern "C" void action_deinit_weather_screen(lv_event_t* e)
     {
         lv_timer_del(g_weather_time_timer);
         g_weather_time_timer = nullptr;
+    }
+}
+
+// ============================================================================
+// 设置页面动作
+// ============================================================================
+
+/**
+ * @brief 亮度设置滑块值变化回调
+ * @param e LVGL事件对象
+ */
+extern "C" void action_setting_brightness_changed(lv_event_t* e)
+{
+    lv_obj_t* slider = lv_event_get_target(e);
+    int32_t value = lv_slider_get_value(slider);
+
+    // TODO: 实现亮度调节功能
+    // 可以通过写入/sys/class/backlight/.../brightness来调节屏幕亮度
+}
+
+/**
+ * @brief 音量设置滑块值变化回调
+ * @param e LVGL事件对象
+ */
+extern "C" void action_setting_volume_changed(lv_event_t* e)
+{
+    lv_obj_t* slider = lv_event_get_target(e);
+    int32_t value = lv_slider_get_value(slider);
+
+    // TODO: 实现音量调节功能
+    // 可以通过amixer或pulseaudio设置系统音量
+}
+
+// ============================================================================
+// WiFi设置页面动作
+// ============================================================================
+
+/**
+ * @brief WiFi开关状态变化回调
+ * @param e LVGL事件对象
+ */
+extern "C" void action_setting_wifi_state_changed(lv_event_t* e)
+{
+    lv_obj_t* sw = lv_event_get_target(e);
+    bool is_on = lv_obj_has_state(sw, LV_STATE_CHECKED);
+
+    if (is_on)
+    {
+        // 打开WiFi
+        system("ifconfig wlan0 up > /dev/null 2>&1");
+        // 启动扫描（异步）
+        system("wpa_cli scan > /dev/null 2>&1 &");
+    }
+    else
+    {
+        // 关闭WiFi
+        system("ifconfig wlan0 down > /dev/null 2>&1");
+    }
+}
+
+/**
+ * @brief WiFi列表项点击回调
+ * @param e LVGL事件对象
+ */
+static void wifi_item_click_cb(lv_event_t* e)
+{
+    lv_obj_t* btn = lv_event_get_target(e);
+    lv_obj_t* label = lv_obj_get_child(btn, 0);
+    if (label)
+    {
+        const char* ssid = lv_label_get_text(label);
+        g_selected_wifi_ssid = ssid;
+        std::cout << "[WiFi] Selected: " << g_selected_wifi_ssid << std::endl;
+
+        // 显示密码输入框
+        if (objects.setting_wifi_secret_picker_mask)
+        {
+            lv_obj_clear_flag(objects.setting_wifi_secret_picker_mask, LV_OBJ_FLAG_HIDDEN);
+            std::cout << "[WiFi] Password picker shown" << std::endl;
+        }
+    }
+}
+
+/**
+ * @brief 刷新WiFi列表
+ * @details 扫描附近WiFi并更新列表显示
+ */
+static void refresh_wifi_list()
+{
+    std::cout << "[WiFi] refresh_wifi_list called" << std::endl;
+
+    if (!objects.wifi_list_panel)
+    {
+        std::cout << "[WiFi] wifi_list_panel is null" << std::endl;
+        return;
+    }
+
+    // 清除现有列表
+    lv_obj_clean(objects.wifi_list_panel);
+    std::cout << "[WiFi] panel cleaned" << std::endl;
+
+    // 直接使用已有的扫描结果，不重新扫描（避免阻塞）
+    FILE* fp = popen("wpa_cli scan_results 2>/dev/null", "r");
+    if (!fp)
+    {
+        std::cout << "[WiFi] failed to run wpa_cli scan_results" << std::endl;
+        return;
+    }
+
+    char line[512];
+    int y_offset = 0;
+    int line_num = 0;
+    int wifi_count = 0;
+
+    std::cout << "[WiFi] reading scan results..." << std::endl;
+
+    while (fgets(line, sizeof(line), fp))
+    {
+        line_num++;
+        std::cout << "[WiFi] line " << line_num << ": " << line;
+
+        // 跳过前两行（Selected interface 和 表头）
+        if (line_num <= 2)
+            continue;
+
+        // 提取最后一个制表符后的字段作为SSID
+        std::string line_str(line);
+        // 找到最后一个制表符
+        size_t last_tab = line_str.find_last_of('\t');
+        if (last_tab != std::string::npos)
+        {
+            std::string ssid = line_str.substr(last_tab + 1);
+            // 去除后面的换行符
+            size_t end = ssid.find_last_not_of("\n\r");
+            if (end != std::string::npos)
+                ssid = ssid.substr(0, end + 1);
+
+            std::cout << "[WiFi] extracted SSID: '" << ssid << "'" << std::endl;
+
+            if (!ssid.empty() && ssid != "ssid")
+            {
+                // 创建WiFi项按钮
+                lv_obj_t* btn = lv_btn_create(objects.wifi_list_panel);
+                lv_obj_set_size(btn, lv_pct(90), 40);
+                lv_obj_align(btn, LV_ALIGN_TOP_MID, 0, y_offset);
+                lv_obj_set_style_bg_color(btn, lv_color_hex(0x333333), 0);
+                lv_obj_set_style_bg_opa(btn, LV_OPA_50, 0);
+
+                // 创建SSID标签
+                lv_obj_t* label = lv_label_create(btn);
+                lv_label_set_text(label, ssid.c_str());
+                lv_obj_center(label);
+
+                // 添加点击事件
+                lv_obj_add_event_cb(btn, wifi_item_click_cb, LV_EVENT_CLICKED, nullptr);
+
+                y_offset += 45;
+                wifi_count++;
+
+                std::cout << "[WiFi] created button for: " << ssid << std::endl;
+
+                if (y_offset > 400) // 限制显示数量
+                    break;
+            }
+        }
+    }
+
+    pclose(fp);
+    std::cout << "[WiFi] total WiFi found: " << wifi_count << std::endl;
+}
+
+/**
+ * @brief 获取当前连接的WiFi信息
+ * @param ssid 输出SSID
+ * @param ip 输出IP地址
+ * @return 是否成功获取
+ */
+static bool get_connected_wifi_info(std::string& ssid, std::string& ip)
+{
+    std::cout << "[WiFi] get_connected_wifi_info called" << std::endl;
+
+    // 获取IP地址 - 适配ifconfig格式: inet addr:192.168.1.86
+    FILE* fp = popen("ifconfig wlan0 2>/dev/null | grep 'inet addr:' | awk -F: '{print $2}' | awk '{print $1}'", "r");
+    if (fp)
+    {
+        char buf[64];
+        if (fgets(buf, sizeof(buf), fp))
+        {
+            buf[strcspn(buf, "\n")] = 0;
+            ip = buf;
+            std::cout << "[WiFi] IP found: '" << ip << "'" << std::endl;
+        }
+        else
+        {
+            std::cout << "[WiFi] IP not found" << std::endl;
+        }
+        pclose(fp);
+    }
+
+    // 获取SSID - 使用wpa_cli
+    fp = popen("wpa_cli status 2>/dev/null | grep '^ssid=' | cut -d= -f2", "r");
+    if (fp)
+    {
+        char buf[64];
+        if (fgets(buf, sizeof(buf), fp))
+        {
+            buf[strcspn(buf, "\n")] = 0;
+            ssid = buf;
+            std::cout << "[WiFi] SSID found: '" << ssid << "'" << std::endl;
+        }
+        else
+        {
+            std::cout << "[WiFi] SSID not found" << std::endl;
+        }
+        pclose(fp);
+    }
+
+    bool result = !ip.empty() && !ssid.empty();
+    std::cout << "[WiFi] get_connected_wifi_info result: " << (result ? "true" : "false") << std::endl;
+    return result;
+}
+
+/**
+ * @brief 初始化WiFi设置页面
+ * @param e LVGL事件对象
+ * @details 进入页面时检查WiFi状态，如果已连接则开关设为打开并显示WiFi列表和连接信息
+ */
+extern "C" void action_init_wifi_setting_page(lv_event_t* e)
+{
+    std::cout << "[WiFi] action_init_wifi_setting_page called" << std::endl;
+
+    std::string ssid, ip;
+    bool is_connected = get_connected_wifi_info(ssid, ip);
+    std::cout << "[WiFi] is_connected: " << (is_connected ? "yes" : "no") << ", ssid: '" << ssid << "', ip: '" << ip
+              << "'" << std::endl;
+
+    // 根据实际WiFi状态设置开关
+    if (objects.wifi_switch)
+    {
+        std::cout << "[WiFi] wifi_switch exists" << std::endl;
+        if (is_connected)
+        {
+            lv_obj_add_state(objects.wifi_switch, LV_STATE_CHECKED);
+            std::cout << "[WiFi] switch set to ON" << std::endl;
+        }
+        else
+        {
+            lv_obj_clear_state(objects.wifi_switch, LV_STATE_CHECKED);
+            std::cout << "[WiFi] switch set to OFF" << std::endl;
+        }
+    }
+    else
+    {
+        std::cout << "[WiFi] wifi_switch is null" << std::endl;
+    }
+
+    // 刷新WiFi列表（无论是否连接都显示）
+    refresh_wifi_list();
+
+    // 显示当前连接的WiFi信息（一行显示，支持循环滑动）
+    if (objects.connected_wifi_info_label)
+    {
+        std::cout << "[WiFi] connected_wifi_info_label exists" << std::endl;
+        if (is_connected)
+        {
+            std::string info = ssid + "  " + ip;
+            lv_label_set_text(objects.connected_wifi_info_label, info.c_str());
+        }
+        else
+        {
+            lv_label_set_text(objects.connected_wifi_info_label, "未连接");
+        }
+    }
+}
+
+/**
+ * @brief 确认WiFi密码并连接
+ * @param e LVGL事件对象
+ * @details 获取密码输入框内容，配置wpa_supplicant并连接WiFi
+ */
+extern "C" void action_confirm_wifi_password(lv_event_t* e)
+{
+    std::cout << "[WiFi] action_confirm_wifi_password called" << std::endl;
+    std::cout << "[WiFi] Selected SSID: " << g_selected_wifi_ssid << std::endl;
+
+    // 获取密码
+    const char* password = "";
+    if (objects.setting_wifi_secret)
+    {
+        password = lv_textarea_get_text(objects.setting_wifi_secret);
+        std::cout << "[WiFi] Password length: " << strlen(password) << std::endl;
+    }
+
+    if (g_selected_wifi_ssid.empty())
+    {
+        std::cout << "[WiFi] Error: No SSID selected" << std::endl;
+        return;
+    }
+
+    // 创建wpa_supplicant配置文件
+    std::string config_cmd = "wpa_cli remove_network all > /dev/null 2>&1; ";
+    config_cmd += "wpa_cli add_network > /dev/null 2>&1; ";
+    config_cmd += "wpa_cli set_network 0 ssid '\"" + g_selected_wifi_ssid + "\"' > /dev/null 2>&1; ";
+    config_cmd += "wpa_cli set_network 0 psk '\"" + std::string(password) + "\"' > /dev/null 2>&1; ";
+    config_cmd += "wpa_cli set_network 0 key_mgmt WPA-PSK > /dev/null 2>&1; ";
+    config_cmd += "wpa_cli enable_network 0 > /dev/null 2>&1; ";
+    config_cmd += "wpa_cli save_config > /dev/null 2>&1";
+
+    std::cout << "[WiFi] Executing connection command..." << std::endl;
+    int ret = system(config_cmd.c_str());
+
+    if (ret == 0)
+    {
+        std::cout << "[WiFi] WiFi configuration saved, connecting..." << std::endl;
+
+        // 触发连接
+        system("wpa_cli select_network 0 > /dev/null 2>&1");
+
+        // 等待连接完成（最多10秒）
+        for (int i = 0; i < 10; i++)
+        {
+            sleep(1);
+            std::string check_ssid, check_ip;
+            if (get_connected_wifi_info(check_ssid, check_ip))
+            {
+                if (check_ssid == g_selected_wifi_ssid)
+                {
+                    std::cout << "[WiFi] Connected successfully to: " << check_ssid << std::endl;
+
+                    // 更新UI
+                    if (objects.connected_wifi_info_label)
+                    {
+                        std::string info = check_ssid + "  " + check_ip;
+                        lv_label_set_text(objects.connected_wifi_info_label, info.c_str());
+                    }
+
+                    // 隐藏密码输入框
+                    if (objects.setting_wifi_secret_picker_mask)
+                    {
+                        lv_obj_add_flag(objects.setting_wifi_secret_picker_mask, LV_OBJ_FLAG_HIDDEN);
+                    }
+
+                    // 刷新WiFi列表
+                    refresh_wifi_list();
+                    return;
+                }
+            }
+        }
+
+        std::cout << "[WiFi] Connection timeout" << std::endl;
+    }
+    else
+    {
+        std::cout << "[WiFi] Failed to configure WiFi" << std::endl;
     }
 }

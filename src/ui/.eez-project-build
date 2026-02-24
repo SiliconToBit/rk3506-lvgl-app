@@ -29,6 +29,7 @@
     "ui_image_pre.c",
     "ui_image_sensor.c",
     "ui_image_setting.c",
+    "ui_image_setting2.c",
     "ui_image_sound.c",
     "ui_image_video.c",
     "ui_image_weather.c",
