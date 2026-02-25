@@ -9,9 +9,7 @@ extern "C"
 {
 #endif
 
-    int bridge_init(void);
-    void bridge_deinit(void);
-
+    // ========== 音乐播放 ==========
     void bridge_music_scan_dir(const char *path);
     char **bridge_get_music_playlist(size_t *out_count);
     void bridge_free_music_playlist(char **playlist, size_t count);
@@ -19,8 +17,6 @@ extern "C"
     void bridge_music_pause(void);
     void bridge_music_prev(void);
     void bridge_music_next(void);
-    void bridge_update_weather(void);
-    void bridge_update_weather_city(const char *city);
 
     typedef struct
     {
@@ -50,6 +46,8 @@ extern "C"
         char day3_windDir[64];
     } AppWeatherData;
 
+    void bridge_update_weather(void);
+    void bridge_update_weather_city(const char *city);
     void bridge_get_weather_data(AppWeatherData *data);
 
     double bridge_music_current_time(void);
@@ -66,9 +64,9 @@ extern "C"
     void bridge_set_brightness(int level);
     int bridge_get_brightness(void);
 
-    // 设备控制接口
-    int bridge_device_init(void);
-    void bridge_device_deinit(void);
+    // ========== 设备控制接口 ==========
+    // 注意：设备初始化现在由 DeviceService 统一管理
+    // 这些接口需要确保 DeviceService 已经初始化
 
     // LED 控制
     int bridge_led_add(const char *deviceId, const char *gpioPath);
@@ -90,16 +88,16 @@ extern "C"
     int bridge_dht11_get_temp(const char *deviceId);
     int bridge_dht11_get_humi(const char *deviceId);
 
-    // 温湿度上报
-    void bridge_sensor_report_enable(int enable, int intervalSec);
-    void bridge_sensor_report_once(void);
-
-    // MQTT 连接
+    // ========== MQTT (通过 IoTService) ==========
     int bridge_mqtt_connect(const char *host, int port, const char *clientId);
     void bridge_mqtt_disconnect(void);
     int bridge_mqtt_is_connected(void);
 
-    // 红外学习模块
+    // 传感器上报控制 (通过 IoTService)
+    void bridge_sensor_report_enable(int enable, int intervalSec);
+    void bridge_sensor_report_once(void);
+
+    // ========== 红外学习模块 ==========
     int bridge_ir_init(const char *devPath);
     void bridge_ir_deinit(void);
 

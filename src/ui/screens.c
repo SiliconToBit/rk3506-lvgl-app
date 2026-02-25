@@ -1739,7 +1739,6 @@ void create_screen_setting_page() {
             objects.wifi_content_area = obj;
             lv_obj_set_pos(obj, 289, 67);
             lv_obj_set_size(obj, 491, 387);
-            lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
             lv_obj_set_style_flex_grow(obj, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_layout(obj, LV_LAYOUT_FLEX, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_flex_flow(obj, LV_FLEX_FLOW_COLUMN, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -1810,7 +1809,6 @@ void create_screen_setting_page() {
             objects.lightness_content_area = obj;
             lv_obj_set_pos(obj, 289, 67);
             lv_obj_set_size(obj, 491, 83);
-            lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
             {
                 lv_obj_t *parent_obj = obj;
                 {
@@ -1843,7 +1841,6 @@ void create_screen_setting_page() {
             objects.sound_content_area = obj;
             lv_obj_set_pos(obj, 289, 67);
             lv_obj_set_size(obj, 491, 83);
-            lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
             {
                 lv_obj_t *parent_obj = obj;
                 {
@@ -1990,6 +1987,45 @@ void delete_screen_setting_page() {
 void tick_screen_setting_page() {
     void *flowState = getFlowState(0, 6);
     (void)flowState;
+    {
+        bool new_val = evalBooleanProperty(flowState, 15, 3, "Failed to evaluate Hidden flag");
+        bool cur_val = lv_obj_has_flag(objects.wifi_content_area, LV_OBJ_FLAG_HIDDEN);
+        if (new_val != cur_val) {
+            tick_value_change_obj = objects.wifi_content_area;
+            if (new_val) {
+                lv_obj_add_flag(objects.wifi_content_area, LV_OBJ_FLAG_HIDDEN);
+            } else {
+                lv_obj_clear_flag(objects.wifi_content_area, LV_OBJ_FLAG_HIDDEN);
+            }
+            tick_value_change_obj = NULL;
+        }
+    }
+    {
+        bool new_val = evalBooleanProperty(flowState, 21, 3, "Failed to evaluate Hidden flag");
+        bool cur_val = lv_obj_has_flag(objects.lightness_content_area, LV_OBJ_FLAG_HIDDEN);
+        if (new_val != cur_val) {
+            tick_value_change_obj = objects.lightness_content_area;
+            if (new_val) {
+                lv_obj_add_flag(objects.lightness_content_area, LV_OBJ_FLAG_HIDDEN);
+            } else {
+                lv_obj_clear_flag(objects.lightness_content_area, LV_OBJ_FLAG_HIDDEN);
+            }
+            tick_value_change_obj = NULL;
+        }
+    }
+    {
+        bool new_val = evalBooleanProperty(flowState, 25, 3, "Failed to evaluate Hidden flag");
+        bool cur_val = lv_obj_has_flag(objects.sound_content_area, LV_OBJ_FLAG_HIDDEN);
+        if (new_val != cur_val) {
+            tick_value_change_obj = objects.sound_content_area;
+            if (new_val) {
+                lv_obj_add_flag(objects.sound_content_area, LV_OBJ_FLAG_HIDDEN);
+            } else {
+                lv_obj_clear_flag(objects.sound_content_area, LV_OBJ_FLAG_HIDDEN);
+            }
+            tick_value_change_obj = NULL;
+        }
+    }
 }
 
 void create_screen_cpu_page() {

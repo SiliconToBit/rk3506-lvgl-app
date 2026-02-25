@@ -1,7 +1,7 @@
 /**
  * @file DeviceService.h
- * @brief 设备管理服务类
- * @details 管理LED、蜂鸣器等设备的本地控制和MQTT远程控制，支持温湿度上报
+ * @brief 硬件设备管理服务类
+ * @details 管理LED、蜂鸣器、DHT11传感器等硬件设备的本地控制
  */
 
 #ifndef LVGL_APP_SERVICE_DEVICE_SERVICE_H
@@ -10,14 +10,11 @@
 #include "Buzzer.h"
 #include "Dht11.h"
 #include "Led.h"
-#include "MqttService.h"
 #include <functional>
 #include <map>
 #include <memory>
 #include <string>
-#include <thread>
 #include <atomic>
-#include <unordered_map>
 
 struct DeviceInfo
 {
@@ -26,12 +23,8 @@ struct DeviceInfo
     bool state;
 };
 
-struct SensorData
-{
-    int temperature;
-    int humidity;
-    long timestamp;
-};
+// SensorData 定义在 IoTService.h 中，这里使用前向声明
+struct SensorData;
 
 class DeviceService
 {
@@ -44,9 +37,15 @@ public:
     DeviceService(const DeviceService&) = delete;
     DeviceService& operator=(const DeviceService&) = delete;
 
+    // 初始化和反初始化
     bool init();
     void deinit();
+    bool isInitialized() const
+    {
+        return m_initialized;
+    }
 
+    // LED设备管理
     bool addLed(const std::string& deviceId, const std::string& gpioPath);
     bool setDeviceOn(const std::string& deviceId);
     bool setDeviceOff(const std::string& deviceId);
@@ -54,44 +53,30 @@ public:
     bool getDeviceState(const std::string& deviceId) const;
     bool hasDevice(const std::string& deviceId) const;
 
+    // 蜂鸣器设备管理
     bool addBuzzer(const std::string& deviceId, const std::string& gpioPath);
     bool buzzerOn(const std::string& deviceId);
     bool buzzerOff(const std::string& deviceId);
     bool buzzerBeep(const std::string& deviceId, int durationMs);
     bool buzzerBeepPattern(const std::string& deviceId, int onMs, int offMs, int count);
 
+    // DHT11传感器管理
     bool addDht11(const std::string& deviceId, const std::string& devPath);
     SensorData getSensorData(const std::string& deviceId) const;
     int getTemperature(const std::string& deviceId);
     int getHumidity(const std::string& deviceId);
 
-    void enableSensorReport(bool enable, int intervalSec = 30);
-    void setSensorReportTopic(const std::string& topic);
-    void reportSensorData();
-
+    // 设备管理
     bool removeDevice(const std::string& deviceId);
     std::map<std::string, DeviceInfo> getAllDevices() const;
+
+    // 回调设置
     void setDeviceStateCallback(DeviceStateCallback callback);
     void setSensorDataCallback(SensorDataCallback callback);
-
-    bool connectMqtt(const std::string& host, int port, const std::string& clientId = "device_controller");
-    void disconnectMqtt();
-    bool isMqttConnected() const;
-
-    void setMqttCommandTopic(const std::string& topic);
-    void setMqttStatusTopic(const std::string& topic);
 
 private:
     DeviceService();
     ~DeviceService();
-
-    void handleMqttMessage(const std::string& topic, const std::string& payload);
-    void handleIrCommand(const std::string& payload);
-    std::string mapIrDevice(const std::string& device);
-    std::string mapIrCommand(const std::string& cmd);
-    void publishDeviceStatus(const std::string& deviceId, bool state);
-    void subscribeMqttTopics();
-    void sensorReportThread();
 
     std::map<std::string, std::unique_ptr<Led>> m_leds;
     std::map<std::string, std::unique_ptr<Buzzer>> m_buzzers;
@@ -99,16 +84,9 @@ private:
     std::map<std::string, DeviceInfo> m_deviceInfos;
     std::map<std::string, SensorData> m_sensorDatas;
 
-    std::unique_ptr<MqttService> m_mqtt;
-    std::string m_commandTopic;
-    std::string m_statusTopic;
-    std::string m_sensorTopic;
     DeviceStateCallback m_stateCallback;
     SensorDataCallback m_sensorCallback;
 
-    std::thread m_reportThread;
-    std::atomic<bool> m_reportRunning;
-    int m_reportInterval;
     bool m_initialized;
 };
 

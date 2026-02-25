@@ -9,17 +9,13 @@
 #include <lvgl/src/extra/libs/fsdrv/lv_fsdrv.h>
 #include "lv_port_init.h"
 
-// #include "./ui/generated/events_init.h"
-// #include "./ui/generated/gui_guider.h"
-// #include "custom.h"
 #include "ui.h"
 
-#include "AppBridge.h"
 #include "AppConfig.h"
 #include "DeviceService.h"
+#include "IoTService.h"
 #include "FontManager.h"
 
-// lv_ui guider_ui;
 static int quit = 0;
 
 static void sigterm_handler(int sig)
@@ -28,10 +24,11 @@ static void sigterm_handler(int sig)
     quit = 1;
 }
 
-static int background_services_init(void)
+static int services_init(void)
 {
-    std::cout << "[Main] Initializing background services..." << std::endl;
+    std::cout << "[Main] Initializing services..." << std::endl;
 
+    // 初始化硬件设备服务
     auto& deviceService = DeviceService::instance();
     if (!deviceService.init())
     {
@@ -39,18 +36,30 @@ static int background_services_init(void)
         return -1;
     }
 
+    // 添加硬件设备
     deviceService.addLed("led1", APP_GPIO_LED1);
     deviceService.addLed("led2", APP_GPIO_LED2);
-
     deviceService.addBuzzer("buzzer1", APP_GPIO_BUZZER);
-
     deviceService.addDht11("dht11_1", APP_DEV_DHT11);
 
-    if (deviceService.connectMqtt(APP_MQTT_HOST, APP_MQTT_PORT, APP_MQTT_CLIENT_ID))
+    // 初始化 IoT 服务
+    auto& iotService = IoTService::instance();
+    if (!iotService.init())
+    {
+        std::cerr << "[Main] IoT service init failed" << std::endl;
+        return -1;
+    }
+
+    // 初始化 IR 命令管理器
+    iotService.initIrCommandManager("/data/ir_commands");
+
+    // 连接 MQTT
+    if (iotService.connectMqtt(APP_MQTT_HOST, APP_MQTT_PORT, APP_MQTT_CLIENT_ID))
     {
         std::cout << "[Main] MQTT connected to " << APP_MQTT_HOST << std::endl;
 
-        deviceService.enableSensorReport(true, APP_SENSOR_REPORT_INTERVAL);
+        // 启用传感器数据上报
+        iotService.enableSensorReport(true, APP_SENSOR_REPORT_INTERVAL);
         std::cout << "[Main] Sensor report enabled, interval: " << APP_SENSOR_REPORT_INTERVAL << "s" << std::endl;
     }
     else
@@ -58,20 +67,23 @@ static int background_services_init(void)
         std::cerr << "[Main] MQTT connection failed, remote control disabled" << std::endl;
     }
 
-    std::cout << "[Main] Background services initialized" << std::endl;
+    std::cout << "[Main] Services initialized" << std::endl;
     return 0;
 }
 
-static void background_services_deinit(void)
+static void services_deinit(void)
 {
-    std::cout << "[Main] Deinitializing background services..." << std::endl;
+    std::cout << "[Main] Deinitializing services..." << std::endl;
+
+    auto& iotService = IoTService::instance();
+    iotService.disableSensorReport();
+    iotService.disconnectMqtt();
+    iotService.deinit();
 
     auto& deviceService = DeviceService::instance();
-    deviceService.enableSensorReport(false, 0);
-    deviceService.disconnectMqtt();
     deviceService.deinit();
 
-    std::cout << "[Main] Background services deinitialized" << std::endl;
+    std::cout << "[Main] Services deinitialized" << std::endl;
 }
 
 int main(int argc, char **argv)
@@ -79,31 +91,21 @@ int main(int argc, char **argv)
     signal(2, sigterm_handler);
 
     lv_port_init();
-
     lv_fs_posix_init();
 
     /*****************************用户程序开始*************************************/
 
-    
-    if (bridge_init() != 0)
-    {
-        std::cerr << "[Main] Bridge init failed" << '\n';
-    }
+    // if (!font_manager_init())
+    // {
+    //     std::cerr << "[Main] Font manager init failed" << std::endl;
+    //     return -1;
+    // }
 
-    if (!font_manager_init())
+    if (services_init() != 0)
     {
-        std::cerr << "[Main] Font manager init failed" << '\n';
+        std::cerr << "[Main] Services init failed" << std::endl;
         return -1;
     }
-
-    if (background_services_init() != 0)
-    {
-        std::cerr << "[Main] Background services init failed" << std::endl;
-    }
-
-    // setup_ui(&guider_ui);
-    // custom_init(&guider_ui);
-    // events_init(&guider_ui);
 
     ui_init(); // 初始化UI
 
@@ -115,8 +117,7 @@ int main(int argc, char **argv)
         usleep(1000); // 1ms，EEZ Studio 推荐的延时
     }
 
-    background_services_deinit();
-    font_manager_deinit();
-    bridge_deinit();
+    services_deinit();
+    // font_manager_deinit();
     return 0;
 }
