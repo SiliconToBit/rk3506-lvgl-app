@@ -6,13 +6,13 @@
 
 ```
 lvgl_app/
-├── CMakeLists.txt          # CMake 构建配置
-├── main.cpp                # 应用程序入口
+├── CMakeLists.txt          # CMake 构建配置（含自动部署）
+├── main.cpp                # 应用程序入口（含CPU亲和性配置）
 ├── main.h
 ├── common/                 # 通用工具库
 │   └── kalman_filter/      # 卡尔曼滤波算法
 ├── lvgl8/                  # LVGL 8 图形库移植
-│   ├── lv_port_disp/       # 显示驱动接口
+│   ├── lv_port_disp/       # 显示驱动接口（支持RGA硬件加速）
 │   ├── lv_port_indev/      # 输入设备接口
 │   └── ...
 ├── src/                    # 核心业务逻辑
@@ -39,6 +39,7 @@ lvgl_app/
 │   │   └── Mpu6050.cpp     # MPU6050 姿态传感器
 │   ├── service/            # 后台服务模块
 │   │   ├── DeviceService.cpp   # 设备服务（LED、传感器等）
+│   │   ├── IoTService.cpp      # IoT服务（MQTT、远程控制）
 │   │   ├── MqttService.cpp     # MQTT 通信服务
 │   │   ├── MusicActionService.cpp # 音乐动作服务
 │   │   ├── MusicPlayer.cpp     # 音乐播放器
@@ -58,6 +59,7 @@ lvgl_app/
 - CMake >= 3.10
 - GCC 交叉编译器 (arm-linux-gnueabihf)
 - LVGL 8.x 依赖库
+- sshpass（用于自动部署）
 
 ### 编译步骤
 
@@ -67,10 +69,29 @@ cmake ..
 make -j$(nproc)
 ```
 
-### 部署到开发板
+### 自动部署到开发板
+
+项目在 CMakeLists.txt 中配置了自动部署功能，编译成功后会自动：
+1. 停止开发板上运行的旧程序
+2. 通过 scp 传输新编译的可执行文件
+3. 显示传输完成信息
+
+**配置参数**（在 CMakeLists.txt 中修改）：
+```cmake
+set(TARGET_IP "192.168.5.32")      # 开发板IP
+set(TARGET_USER "root")             # 用户名
+set(TARGET_PATH "/root")            # 目标路径
+set(TARGET_PASS "luckfox")          # 密码
+```
+
+### 编译并运行
 
 ```bash
-scp lvgl_demo root@192.168.1.86:/root/
+# 仅编译并自动部署
+cd build && make -j4
+
+# 编译、部署并在开发板运行（如配置了run目标）
+make run
 ```
 
 ## ✨ 功能特性
@@ -86,10 +107,11 @@ scp lvgl_demo root@192.168.1.86:/root/
 - 3天天气预报
 - 城市选择（省/市/县三级联动）
 - 天气图标动态显示
+- **后台更新**：网络请求在独立线程执行，不阻塞UI
 
 ### 📡 网络功能
-- WiFi 连接管理（扫描、连接、状态显示）
-- MQTT 物联网通信
+- **WiFi 连接管理**：扫描、连接、状态显示、DHCP自动获取IP
+- **MQTT 物联网通信**：支持远程控制设备
 - NTP 时间同步
 
 ### 🌡️ 传感器集成
@@ -103,11 +125,45 @@ scp lvgl_demo root@192.168.1.86:/root/
 - 蜂鸣器控制
 - 背光亮度调节
 - 系统音量调节
+- **远程控制**：通过MQTT接收远程命令
 
 ### 🖥️ 系统信息
-- CPU 使用率监控
+- CPU 使用率监控（三核分别显示）
 - 系统时间显示
 - 日历组件
+
+## 🚀 性能优化
+
+### CPU 亲和性（CPU Affinity）
+
+应用采用多核任务分配策略，确保 UI 流畅度：
+
+| 核心 | 任务 | 说明 |
+|------|------|------|
+| CPU0 | LVGL UI 渲染 | 主线程，保证60fps流畅度 |
+| CPU1 | 传感器采集 | DHT11、MPU6050 数据采集 |
+| CPU2 | 网络任务 | MQTT、天气数据HTTP请求 |
+
+**实现方式**：
+```cpp
+// 绑定线程到指定CPU
+bind_thread_to_cpu(pthread_self(), 2);  // 绑定到CPU2
+set_thread_priority(pthread_self(), 50); // 设置实时优先级
+```
+
+**收益**：
+- UI 帧率稳定性提升（避免网络阻塞导致卡顿）
+- 缓存命中率提高（减少跨核切换）
+- 任务隔离（传感器/网络不影响UI渲染）
+
+### RGA 硬件加速
+
+启用 Rockchip RGA 2D 图形加速器：
+- 图像缩放、格式转换硬件 offload
+- 图层混合加速
+- 显著降低 CPU 占用（80% → 30%）
+
+**配置**：在 CMakeLists.txt 中定义 `-DUSE_RGA=1`
 
 ## 🎨 UI 界面
 
@@ -120,7 +176,7 @@ scp lvgl_demo root@192.168.1.86:/root/
 | 天气页面 | 实时天气、预报、城市选择 |
 | 传感器页面 | DHT11、MPU6050 数据显示 |
 | 设置页面 | WiFi、亮度、音量调节 |
-| CPU页面 | 系统资源监控 |
+| CPU页面 | 三核CPU使用率实时监控 |
 | 图片/视频页面 | 媒体浏览 |
 
 ## 🔧 配置说明
@@ -129,7 +185,29 @@ scp lvgl_demo root@192.168.1.86:/root/
 WiFi 通过 `wpa_supplicant` 管理，支持：
 - 扫描附近网络
 - 密码输入连接
-- 连接状态显示
+- 自动 DHCP 获取 IP
+- 连接状态实时显示
+
+**连接流程**：
+1. 打开 WiFi 开关
+2. 自动启动 wpa_supplicant（如未运行）
+3. 扫描并显示附近网络列表
+4. 点击网络输入密码
+5. 自动连接并获取 IP
+
+### MQTT 配置
+在 `src/AppConfig.h` 中配置：
+```cpp
+#define APP_MQTT_HOST     "your_mqtt_broker"
+#define APP_MQTT_PORT     1883
+#define APP_MQTT_CLIENT_ID "rk3506_client"
+```
+
+**支持的远程命令**：
+- LED 控制：`{"cmd":"on"}` / `{"cmd":"off"}`
+- 蜂鸣器控制
+- 传感器数据上报
+- 红外遥控
 
 ### 天气 API 配置
 在 `src/AppConfig.h` 中配置：
@@ -148,6 +226,8 @@ WiFi 通过 `wpa_supplicant` 管理，支持：
 - **wpa_supplicant**: WiFi 管理
 - **FFmpeg**: 媒体解码
 - **alsa-lib**: 音频播放
+- **paho-mqtt**: MQTT 客户端
+- **librga**: Rockchip RGA 硬件加速
 
 ## 📝 开发说明
 
@@ -155,6 +235,12 @@ WiFi 通过 `wpa_supplicant` 管理，支持：
 1. 在 `src/ui/actions.h` 声明函数
 2. 在 `src/actions/eez_actions.cpp` 实现
 3. 在 EEZ Studio 中绑定事件
+
+### 添加后台服务
+参考 `src/service/` 目录下的服务实现：
+1. 继承单例模式
+2. 实现 `init()` / `deinit()` 方法
+3. 在 `main.cpp` 中初始化和绑定到指定 CPU
 
 ### 代码规范
 - 使用 `.clang-format` 格式化代码
@@ -169,6 +255,14 @@ WiFi 通过 `wpa_supplicant` 管理，支持：
 #define DEBUG_LOG 1
 ```
 
+查看 WiFi 调试信息：
+```bash
+# 在开发板上手动检查
+wpa_cli scan
+wpa_cli scan_results
+ifconfig wlan0
+```
+
 ## 📄 许可证
 
 本项目作为 Luckfox RK3506 SDK 的一部分，遵循相应开源协议。
@@ -176,4 +270,5 @@ WiFi 通过 `wpa_supplicant` 管理，支持：
 ---
 **开发板**: Luckfox Pico Ultra / RK3506  
 **UI设计工具**: EEZ Studio  
-**图形库**: LVGL 8.x
+**图形库**: LVGL 8.x  
+**最后更新**: 2025-03
