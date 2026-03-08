@@ -829,29 +829,6 @@ extern "C" void action_setting_volume_changed(lv_event_t* e)
 // ============================================================================
 
 /**
- * @brief WiFi开关状态变化回调
- * @param e LVGL事件对象
- */
-extern "C" void action_setting_wifi_state_changed(lv_event_t* e)
-{
-    lv_obj_t* sw = lv_event_get_target(e);
-    bool is_on = lv_obj_has_state(sw, LV_STATE_CHECKED);
-
-    if (is_on)
-    {
-        // 打开WiFi
-        system("ifconfig wlan0 up > /dev/null 2>&1");
-        // 启动扫描（异步）
-        system("wpa_cli scan > /dev/null 2>&1 &");
-    }
-    else
-    {
-        // 关闭WiFi
-        system("ifconfig wlan0 down > /dev/null 2>&1");
-    }
-}
-
-/**
  * @brief WiFi列表项点击回调
  * @param e LVGL事件对象
  */
@@ -1067,6 +1044,73 @@ extern "C" void action_init_wifi_setting_page(lv_event_t* e)
 }
 
 /**
+ * @brief WiFi开关状态变化回调
+ * @param e LVGL事件对象
+ */
+extern "C" void action_setting_wifi_state_changed(lv_event_t* e)
+{
+    lv_obj_t* sw = lv_event_get_target(e);
+    bool is_on = lv_obj_has_state(sw, LV_STATE_CHECKED);
+
+    if (is_on)
+    {
+        // 打开WiFi
+        std::cout << "[WiFi] Turning ON..." << std::endl;
+
+        // 1. 检查并启动 wpa_supplicant
+        std::cout << "[WiFi] Checking wpa_supplicant..." << std::endl;
+        int ret = system("pgrep wpa_supplicant > /dev/null 2>&1");
+        if (ret != 0)
+        {
+            std::cout << "[WiFi] Starting wpa_supplicant..." << std::endl;
+            system("wpa_supplicant -B -i wlan0 -c /etc/wpa_supplicant.conf > /dev/null 2>&1");
+            sleep(2);
+        }
+        else
+        {
+            std::cout << "[WiFi] wpa_supplicant already running" << std::endl;
+        }
+
+        // 2. 启动 WiFi 接口
+        std::cout << "[WiFi] Bringing up wlan0..." << std::endl;
+        system("ifconfig wlan0 up > /dev/null 2>&1");
+        sleep(1);
+
+        // 3. 检查接口状态
+        std::cout << "[WiFi] Checking interface status..." << std::endl;
+        system("ifconfig wlan0");
+
+        // 4. 启动扫描
+        std::cout << "[WiFi] Starting scan..." << std::endl;
+        ret = system("wpa_cli scan > /dev/null 2>&1");
+        std::cout << "[WiFi] wpa_cli scan returned: " << ret << std::endl;
+
+        // 5. 等待扫描完成（3秒）
+        sleep(3);
+
+        // 6. 检查扫描结果
+        std::cout << "[WiFi] Checking scan results..." << std::endl;
+        system("wpa_cli scan_results | head -5");
+
+        // 7. 刷新WiFi列表显示
+        std::cout << "[WiFi] Refreshing list..." << std::endl;
+        refresh_wifi_list();
+    }
+    else
+    {
+        // 关闭WiFi
+        std::cout << "[WiFi] Turning OFF..." << std::endl;
+        system("ifconfig wlan0 down > /dev/null 2>&1");
+
+        // 清空WiFi列表
+        if (objects.wifi_list_panel)
+        {
+            lv_obj_clean(objects.wifi_list_panel);
+        }
+    }
+}
+
+/**
  * @brief 确认WiFi密码并连接
  * @param e LVGL事件对象
  * @details 获取密码输入框内容，配置wpa_supplicant并连接WiFi
@@ -1109,7 +1153,8 @@ extern "C" void action_confirm_wifi_password(lv_event_t* e)
         // 触发连接
         system("wpa_cli select_network 0 > /dev/null 2>&1");
 
-        // 等待连接完成（最多10秒）
+        // 等待WiFi连接完成（最多10秒）
+        bool wifi_connected = false;
         for (int i = 0; i < 10; i++)
         {
             sleep(1);
@@ -1118,25 +1163,63 @@ extern "C" void action_confirm_wifi_password(lv_event_t* e)
             {
                 if (check_ssid == g_selected_wifi_ssid)
                 {
-                    std::cout << "[WiFi] Connected successfully to: " << check_ssid << std::endl;
-
-                    // 更新UI
-                    if (objects.connected_wifi_info_label)
-                    {
-                        std::string info = check_ssid + "  " + check_ip;
-                        lv_label_set_text(objects.connected_wifi_info_label, info.c_str());
-                    }
-
-                    // 隐藏密码输入框
-                    if (objects.setting_wifi_secret_picker_mask)
-                    {
-                        lv_obj_add_flag(objects.setting_wifi_secret_picker_mask, LV_OBJ_FLAG_HIDDEN);
-                    }
-
-                    // 刷新WiFi列表
-                    refresh_wifi_list();
-                    return;
+                    wifi_connected = true;
+                    break;
                 }
+            }
+            // 检查是否已连接（有SSID但可能没有IP）
+            FILE* fp = popen("wpa_cli status 2>/dev/null | grep '^ssid=' | cut -d= -f2", "r");
+            if (fp)
+            {
+                char buf[64];
+                if (fgets(buf, sizeof(buf), fp))
+                {
+                    buf[strcspn(buf, "\n")] = 0;
+                    if (g_selected_wifi_ssid == buf)
+                    {
+                        wifi_connected = true;
+                    }
+                }
+                pclose(fp);
+            }
+            if (wifi_connected)
+                break;
+        }
+
+        if (wifi_connected)
+        {
+            std::cout << "[WiFi] WiFi connected, getting IP via DHCP..." << std::endl;
+
+            // 启动 DHCP 客户端获取 IP
+            system("udhcpc -i wlan0 -q > /dev/null 2>&1");
+            sleep(2);
+
+            // 再次获取连接信息（应该有IP了）
+            std::string check_ssid, check_ip;
+            if (get_connected_wifi_info(check_ssid, check_ip) && !check_ip.empty())
+            {
+                std::cout << "[WiFi] Connected successfully to: " << check_ssid << " IP: " << check_ip << std::endl;
+
+                // 更新UI
+                if (objects.connected_wifi_info_label)
+                {
+                    std::string info = check_ssid + "  " + check_ip;
+                    lv_label_set_text(objects.connected_wifi_info_label, info.c_str());
+                }
+
+                // 隐藏密码输入框
+                if (objects.setting_wifi_secret_picker_mask)
+                {
+                    lv_obj_add_flag(objects.setting_wifi_secret_picker_mask, LV_OBJ_FLAG_HIDDEN);
+                }
+
+                // 刷新WiFi列表
+                refresh_wifi_list();
+                return;
+            }
+            else
+            {
+                std::cout << "[WiFi] Connected but failed to get IP" << std::endl;
             }
         }
 
