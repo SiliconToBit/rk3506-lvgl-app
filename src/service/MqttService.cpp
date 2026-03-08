@@ -3,10 +3,15 @@
 #include <chrono>
 #include <iostream>
 #include <thread>
+#include <dirent.h>
+#include <string.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sched.h>
 
 namespace
 {
-constexpr std::chrono::seconds kMqttWaitTimeout(3);
+    constexpr std::chrono::seconds kMqttWaitTimeout(3);
 }
 
 /**
@@ -44,10 +49,13 @@ public:
 
         if (m_service->m_autoReconnect)
         {
-            std::thread([this]() {
-                std::this_thread::sleep_for(std::chrono::seconds(m_service->m_reconnectInterval));
-                m_service->tryReconnect();
-            }).detach();
+            std::thread(
+                [this]()
+                {
+                    std::this_thread::sleep_for(std::chrono::seconds(m_service->m_reconnectInterval));
+                    m_service->tryReconnect();
+                })
+                .detach();
         }
     }
 
@@ -75,11 +83,7 @@ private:
  * @brief 构造函数
  * @details 初始化连接状态和重连参数
  */
-MqttService::MqttService()
-    : m_connected(false)
-    , m_autoReconnect(true)
-    , m_reconnectInterval(5)
-    , m_messageRunning(false)
+MqttService::MqttService() : m_connected(false), m_autoReconnect(true), m_reconnectInterval(5), m_messageRunning(false)
 {
 }
 
@@ -402,9 +406,7 @@ void MqttService::messageWorkerLoop()
         std::pair<std::string, std::string> message;
         {
             std::unique_lock<std::mutex> lock(m_messageMutex);
-            m_messageCv.wait(lock, [this]() {
-                return !m_messageRunning || !m_messageQueue.empty();
-            });
+            m_messageCv.wait(lock, [this]() { return !m_messageRunning || !m_messageQueue.empty(); });
 
             if (!m_messageRunning && m_messageQueue.empty())
             {
@@ -420,5 +422,83 @@ void MqttService::messageWorkerLoop()
         {
             callback(message.first, message.second);
         }
+    }
+}
+
+/**
+ * @brief 绑定 MQTT 相关线程到指定 CPU
+ * @param cpu_id CPU 核心编号 (0, 1, 2)
+ * @details 遍历 /proc/self/task 下的所有线程，将名称包含 MQTT 的线程绑定到指定 CPU
+ */
+void MqttService::bindMqttThreadsToCpu(int cpu_id)
+{
+    std::cout << "[MQTT] Binding MQTT threads to CPU" << cpu_id << std::endl;
+
+    // 绑定消息处理线程
+    if (m_messageThread.joinable())
+    {
+        cpu_set_t cpuset;
+        CPU_ZERO(&cpuset);
+        CPU_SET(cpu_id, &cpuset);
+
+        pthread_t thread = m_messageThread.native_handle();
+        int ret = pthread_setaffinity_np(thread, sizeof(cpuset), &cpuset);
+        if (ret == 0)
+        {
+            std::cout << "[MQTT] Message worker thread bound to CPU" << cpu_id << std::endl;
+        }
+        else
+        {
+            std::cerr << "[MQTT] Failed to bind message worker thread: " << ret << std::endl;
+        }
+    }
+
+    // 遍历 /proc/self/task 找到所有线程并绑定包含 MQTT 的线程
+    DIR* dir = opendir("/proc/self/task");
+    if (dir)
+    {
+        struct dirent* entry;
+        cpu_set_t cpuset;
+        CPU_ZERO(&cpuset);
+        CPU_SET(cpu_id, &cpuset);
+
+        while ((entry = readdir(dir)) != nullptr)
+        {
+            if (entry->d_type == DT_DIR && strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
+            {
+                // 读取线程名称
+                char comm_path[256];
+                snprintf(comm_path, sizeof(comm_path), "/proc/self/task/%s/comm", entry->d_name);
+                FILE* f = fopen(comm_path, "r");
+                if (f)
+                {
+                    char thread_name[256];
+                    if (fgets(thread_name, sizeof(thread_name), f))
+                    {
+                        // 去掉换行符
+                        thread_name[strcspn(thread_name, "\n")] = 0;
+
+                        // 检查是否是 MQTT 相关线程
+                        if (strstr(thread_name, "MQTT") != nullptr)
+                        {
+                            pid_t tid = atoi(entry->d_name);
+                            int ret = sched_setaffinity(tid, sizeof(cpuset), &cpuset);
+                            if (ret == 0)
+                            {
+                                std::cout << "[MQTT] Thread '" << thread_name << "' (TID: " << tid << ") bound to CPU"
+                                          << cpu_id << std::endl;
+                            }
+                            else
+                            {
+                                std::cerr << "[MQTT] Failed to bind thread '" << thread_name << "' (TID: " << tid
+                                          << "): " << strerror(errno) << std::endl;
+                            }
+                        }
+                    }
+                    fclose(f);
+                }
+            }
+        }
+        closedir(dir);
     }
 }

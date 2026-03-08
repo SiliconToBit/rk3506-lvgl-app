@@ -117,3 +117,30 @@ install(TARGETS ${PROJECT_NAME}
     DESTINATION ${OVERLAY_ROOT_DIR}
     PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ
 )
+
+# --- 自动传输到开发板 ---
+# 配置目标开发板 IP 和密码
+set(TARGET_IP "192.168.5.32")
+set(TARGET_USER "root")
+set(TARGET_PATH "/root")
+set(TARGET_PASS "luckfox")
+
+# 添加编译后自动传输命令
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND echo "[Deploy] Stopping remote process..."
+    COMMAND sshpass -p ${TARGET_PASS} ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${TARGET_USER}@${TARGET_IP} "killall ${PROJECT_NAME} 2>/dev/null || true"
+    COMMAND echo "[Deploy] Transferring ${PROJECT_NAME} to ${TARGET_IP}:${TARGET_PATH}..."
+    COMMAND sshpass -p ${TARGET_PASS} scp -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${PROJECT_NAME} ${TARGET_USER}@${TARGET_IP}:${TARGET_PATH}/
+    COMMAND echo "[Deploy] Transfer complete!"
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Auto-deploy to target board after build"
+    VERBATIM
+)
+
+# --- 编译、传输并运行目标（可选）---
+add_custom_target(run
+    COMMAND echo "[Run] Starting ${PROJECT_NAME} on ${TARGET_IP}..."
+    COMMAND sshpass -p ${TARGET_PASS} ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_IP} "cd ${TARGET_PATH} && ./${PROJECT_NAME} &"
+    COMMENT "Run ${PROJECT_NAME} on target board"
+    VERBATIM
+)

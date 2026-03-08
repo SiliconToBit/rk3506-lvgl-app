@@ -263,6 +263,14 @@ void IoTService::setIrCommandStorePath(const std::string& path)
     m_irStorePath = path;
 }
 
+void IoTService::bindMqttThreadsToCpu(int cpu_id)
+{
+    if (m_mqtt)
+    {
+        m_mqtt->bindMqttThreadsToCpu(cpu_id);
+    }
+}
+
 void IoTService::subscribeMqttTopics()
 {
     if (m_mqtt && m_mqtt->isConnected())

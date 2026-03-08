@@ -70,6 +70,9 @@ public:
     void setIrCommandStorePath(const std::string& path);
     bool initIrCommandManager(const std::string& dataPath);
 
+    // 绑定 MQTT 线程到指定 CPU
+    void bindMqttThreadsToCpu(int cpu_id);
+
 private:
     IoTService();
     ~IoTService();
