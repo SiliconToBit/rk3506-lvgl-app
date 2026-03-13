@@ -24,17 +24,14 @@ Backlight& Backlight::getInstance()
  * @details 初始化亮度和最大亮度文件路径
  */
 Backlight::Backlight(const std::string& path)
-    : m_brightnessPath(path + "brightness")
-    , m_maxBrightnessPath(path + "/max_brightness")
+    : m_brightnessPath(path + "brightness"), m_maxBrightnessPath(path + "/max_brightness")
 {
 }
 
 /**
  * @brief 析构函数
  */
-Backlight::~Backlight()
-{
-}
+Backlight::~Backlight() {}
 
 /**
  * @brief 设置屏幕亮度

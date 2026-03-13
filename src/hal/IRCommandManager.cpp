@@ -11,61 +11,58 @@
 
 namespace
 {
-bool ensureDirRecursive(const std::string &path)
-{
-    if (path.empty())
-        return false;
-
-    if (path == "/")
-        return true;
-
-    struct stat st;
-    if (stat(path.c_str(), &st) == 0)
+    bool ensureDirRecursive(const std::string& path)
     {
-        return S_ISDIR(st.st_mode);
-    }
-
-    const size_t pos = path.find_last_of('/');
-    if (pos != std::string::npos && pos > 0)
-    {
-        std::string parent = path.substr(0, pos);
-        if (!parent.empty() && !ensureDirRecursive(parent))
-        {
+        if (path.empty())
             return false;
+
+        if (path == "/")
+            return true;
+
+        struct stat st;
+        if (stat(path.c_str(), &st) == 0)
+        {
+            return S_ISDIR(st.st_mode);
         }
+
+        const size_t pos = path.find_last_of('/');
+        if (pos != std::string::npos && pos > 0)
+        {
+            std::string parent = path.substr(0, pos);
+            if (!parent.empty() && !ensureDirRecursive(parent))
+            {
+                return false;
+            }
+        }
+
+        if (mkdir(path.c_str(), 0755) == 0)
+        {
+            return true;
+        }
+
+        if (errno == EEXIST)
+        {
+            return stat(path.c_str(), &st) == 0 && S_ISDIR(st.st_mode);
+        }
+
+        return false;
     }
+} // namespace
 
-    if (mkdir(path.c_str(), 0755) == 0)
-    {
-        return true;
-    }
-
-    if (errno == EEXIST)
-    {
-        return stat(path.c_str(), &st) == 0 && S_ISDIR(st.st_mode);
-    }
-
-    return false;
-}
-}
-
-IRCommandManager::IRCommandManager()
-    : m_initialized(false)
-{
-}
+IRCommandManager::IRCommandManager() : m_initialized(false) {}
 
 IRCommandManager::~IRCommandManager()
 {
     deinit();
 }
 
-IRCommandManager &IRCommandManager::getInstance()
+IRCommandManager& IRCommandManager::getInstance()
 {
     static IRCommandManager instance;
     return instance;
 }
 
-bool IRCommandManager::init(const std::string &dataPath)
+bool IRCommandManager::init(const std::string& dataPath)
 {
     if (m_initialized)
         return true;
@@ -93,12 +90,13 @@ void IRCommandManager::deinit()
     m_initialized = false;
 }
 
-std::string IRCommandManager::getKey(const std::string &deviceName, const std::string &commandName)
+std::string IRCommandManager::getKey(const std::string& deviceName, const std::string& commandName)
 {
     return deviceName + "::" + commandName;
 }
 
-bool IRCommandManager::addCommand(const std::string &deviceName, const std::string &commandName, const std::vector<uint8_t> &data)
+bool IRCommandManager::addCommand(const std::string& deviceName, const std::string& commandName,
+                                  const std::vector<uint8_t>& data)
 {
     if (!m_initialized)
         return false;
@@ -115,7 +113,7 @@ bool IRCommandManager::addCommand(const std::string &deviceName, const std::stri
     return saveToFile();
 }
 
-bool IRCommandManager::removeCommand(const std::string &deviceName, const std::string &commandName)
+bool IRCommandManager::removeCommand(const std::string& deviceName, const std::string& commandName)
 {
     if (!m_initialized)
         return false;
@@ -134,14 +132,14 @@ bool IRCommandManager::removeCommand(const std::string &deviceName, const std::s
     return false;
 }
 
-bool IRCommandManager::removeDevice(const std::string &deviceName)
+bool IRCommandManager::removeDevice(const std::string& deviceName)
 {
     if (!m_initialized)
         return false;
 
     std::unordered_map<std::string, IRCommand> backup = m_commands;
     std::vector<std::string> keysToRemove;
-    for (auto &pair : m_commands)
+    for (auto& pair : m_commands)
     {
         if (pair.second.deviceName == deviceName)
         {
@@ -149,7 +147,7 @@ bool IRCommandManager::removeDevice(const std::string &deviceName)
         }
     }
 
-    for (auto &key : keysToRemove)
+    for (auto& key : keysToRemove)
     {
         m_commands.erase(key);
     }
@@ -164,7 +162,7 @@ bool IRCommandManager::removeDevice(const std::string &deviceName)
     return false;
 }
 
-std::vector<uint8_t> IRCommandManager::getCommand(const std::string &deviceName, const std::string &commandName)
+std::vector<uint8_t> IRCommandManager::getCommand(const std::string& deviceName, const std::string& commandName)
 {
     std::string key = getKey(deviceName, commandName);
     auto it = m_commands.find(key);
@@ -175,7 +173,7 @@ std::vector<uint8_t> IRCommandManager::getCommand(const std::string &deviceName,
     return {};
 }
 
-bool IRCommandManager::emitCommand(const std::string &deviceName, const std::string &commandName)
+bool IRCommandManager::emitCommand(const std::string& deviceName, const std::string& commandName)
 {
     std::cout << "[IRCmdMgr] emitCommand: " << deviceName << " -> " << commandName << std::endl;
 
@@ -188,7 +186,7 @@ bool IRCommandManager::emitCommand(const std::string &deviceName, const std::str
         return false;
     }
 
-    IRDevice &ir = IRDevice::getInstance();
+    IRDevice& ir = IRDevice::getInstance();
     std::cout << "[IRCmdMgr] IRDevice isOpen: " << (ir.isOpen() ? "yes" : "no") << std::endl;
 
     bool result = ir.emitRawCode(data);
@@ -202,7 +200,7 @@ std::vector<std::string> IRCommandManager::getDeviceList()
     std::vector<std::string> devices;
     std::unordered_map<std::string, bool> seen;
 
-    for (auto &pair : m_commands)
+    for (auto& pair : m_commands)
     {
         std::string device = pair.second.deviceName;
         if (!seen[device])
@@ -216,11 +214,11 @@ std::vector<std::string> IRCommandManager::getDeviceList()
     return devices;
 }
 
-std::vector<std::string> IRCommandManager::getCommandList(const std::string &deviceName)
+std::vector<std::string> IRCommandManager::getCommandList(const std::string& deviceName)
 {
     std::vector<std::string> commands;
 
-    for (auto &pair : m_commands)
+    for (auto& pair : m_commands)
     {
         if (pair.second.deviceName == deviceName)
         {
@@ -241,28 +239,28 @@ bool IRCommandManager::saveToFile()
         return false;
 
     uint32_t count = static_cast<uint32_t>(m_commands.size());
-    file.write(reinterpret_cast<const char *>(&count), sizeof(count));
+    file.write(reinterpret_cast<const char*>(&count), sizeof(count));
 
-    for (auto &pair : m_commands)
+    for (auto& pair : m_commands)
     {
-        IRCommand &cmd = pair.second;
+        IRCommand& cmd = pair.second;
 
         uint16_t deviceNameLen = static_cast<uint16_t>(cmd.deviceName.size());
-        file.write(reinterpret_cast<const char *>(&deviceNameLen), sizeof(deviceNameLen));
+        file.write(reinterpret_cast<const char*>(&deviceNameLen), sizeof(deviceNameLen));
         file.write(cmd.deviceName.c_str(), deviceNameLen);
 
         uint16_t commandNameLen = static_cast<uint16_t>(cmd.commandName.size());
-        file.write(reinterpret_cast<const char *>(&commandNameLen), sizeof(commandNameLen));
+        file.write(reinterpret_cast<const char*>(&commandNameLen), sizeof(commandNameLen));
         file.write(cmd.commandName.c_str(), commandNameLen);
 
         uint32_t dataLen = static_cast<uint32_t>(cmd.data.size());
-        file.write(reinterpret_cast<const char *>(&dataLen), sizeof(dataLen));
+        file.write(reinterpret_cast<const char*>(&dataLen), sizeof(dataLen));
         if (dataLen > 0)
         {
-            file.write(reinterpret_cast<const char *>(cmd.data.data()), dataLen);
+            file.write(reinterpret_cast<const char*>(cmd.data.data()), dataLen);
         }
 
-        file.write(reinterpret_cast<const char *>(&cmd.timestamp), sizeof(cmd.timestamp));
+        file.write(reinterpret_cast<const char*>(&cmd.timestamp), sizeof(cmd.timestamp));
     }
 
     file.close();
@@ -280,31 +278,31 @@ bool IRCommandManager::loadFromFile()
     m_commands.clear();
 
     uint32_t count;
-    file.read(reinterpret_cast<char *>(&count), sizeof(count));
+    file.read(reinterpret_cast<char*>(&count), sizeof(count));
 
     for (uint32_t i = 0; i < count; i++)
     {
         IRCommand cmd;
 
         uint16_t deviceNameLen;
-        file.read(reinterpret_cast<char *>(&deviceNameLen), sizeof(deviceNameLen));
+        file.read(reinterpret_cast<char*>(&deviceNameLen), sizeof(deviceNameLen));
         cmd.deviceName.resize(deviceNameLen);
         file.read(&cmd.deviceName[0], deviceNameLen);
 
         uint16_t commandNameLen;
-        file.read(reinterpret_cast<char *>(&commandNameLen), sizeof(commandNameLen));
+        file.read(reinterpret_cast<char*>(&commandNameLen), sizeof(commandNameLen));
         cmd.commandName.resize(commandNameLen);
         file.read(&cmd.commandName[0], commandNameLen);
 
         uint32_t dataLen;
-        file.read(reinterpret_cast<char *>(&dataLen), sizeof(dataLen));
+        file.read(reinterpret_cast<char*>(&dataLen), sizeof(dataLen));
         cmd.data.resize(dataLen);
         if (dataLen > 0)
         {
-            file.read(reinterpret_cast<char *>(cmd.data.data()), dataLen);
+            file.read(reinterpret_cast<char*>(cmd.data.data()), dataLen);
         }
 
-        file.read(reinterpret_cast<char *>(&cmd.timestamp), sizeof(cmd.timestamp));
+        file.read(reinterpret_cast<char*>(&cmd.timestamp), sizeof(cmd.timestamp));
 
         std::string key = getKey(cmd.deviceName, cmd.commandName);
         m_commands[key] = cmd;
@@ -314,7 +312,7 @@ bool IRCommandManager::loadFromFile()
     return true;
 }
 
-bool IRCommandManager::commandExists(const std::string &deviceName, const std::string &commandName)
+bool IRCommandManager::commandExists(const std::string& deviceName, const std::string& commandName)
 {
     std::string key = getKey(deviceName, commandName);
     return m_commands.find(key) != m_commands.end();

@@ -8,11 +8,10 @@
  * @details 初始化PCM句柄和设备名称为默认值
  */
 AudioDevice::AudioDevice()
-    : m_pcmHandle(nullptr)
-    , m_deviceName("default")
-    , m_mixerName("Master")
-    , m_volumePercent(75)  // 默认音量 75%，对应 DAC VOLUME 180
-    , m_useSoftwareVolume(false)
+    : m_pcmHandle(nullptr), m_deviceName("default"), m_mixerName("Master"),
+      m_volumePercent(75) // 默认音量 75%，对应 DAC VOLUME 180
+      ,
+      m_useSoftwareVolume(false)
 {
 }
 
@@ -47,10 +46,7 @@ bool AudioDevice::open(unsigned int rate, int channels)
         return false;
     }
 
-    if ((err = snd_pcm_set_params(m_pcmHandle,
-                                  SND_PCM_FORMAT_S16_LE,
-                                  SND_PCM_ACCESS_RW_INTERLEAVED, channels, rate,
-                                  1,
+    if ((err = snd_pcm_set_params(m_pcmHandle, SND_PCM_FORMAT_S16_LE, SND_PCM_ACCESS_RW_INTERLEAVED, channels, rate, 1,
                                   500000)) < 0)
     {
         std::cerr << "Playback open error: " << snd_strerror(err) << std::endl;
@@ -149,13 +145,7 @@ bool AudioDevice::initMixer(snd_mixer_t** handle, snd_mixer_elem_t** elem)
     snd_mixer_selem_id_alloca(&sid);
     snd_mixer_selem_id_set_index(sid, 0);
 
-    static const char* controls[] = {
-        "DAC VOLUME",
-        "Master",
-        "PCM",
-        "Speaker",
-        "Headphone"
-    };
+    static const char* controls[] = {"DAC VOLUME", "Master", "PCM", "Speaker", "Headphone"};
 
     *elem = nullptr;
     for (const char* controlName : controls)
@@ -187,7 +177,7 @@ void AudioDevice::setVolume(long volume)
 {
     volume = std::clamp(volume, 0L, 100L);
     m_volumePercent.store(volume, std::memory_order_relaxed);
-    
+
     std::cout << "[AudioDevice] setVolume request=" << volume << "%" << std::endl;
 
     snd_mixer_t* handle;
@@ -197,7 +187,7 @@ void AudioDevice::setVolume(long volume)
     if (initMixer(&handle, &elem))
     {
         snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
-        
+
         long vol;
         if (m_mixerName == "DAC VOLUME")
         {
@@ -211,13 +201,13 @@ void AudioDevice::setVolume(long volume)
             // 其他混音器使用标准映射
             vol = min + (volume * (max - min) / 100);
         }
-        
+
         snd_mixer_selem_set_playback_volume_all(elem, vol);
-        
+
         snd_mixer_close(handle);
         m_useSoftwareVolume.store(false, std::memory_order_relaxed);
-        std::cout << "[AudioDevice] setVolume applied via ALSA mixer: " << m_mixerName 
-                  << " (" << min << "-" << max << ") -> " << vol << std::endl;
+        std::cout << "[AudioDevice] setVolume applied via ALSA mixer: " << m_mixerName << " (" << min << "-" << max
+                  << ") -> " << vol << std::endl;
     }
     else
     {
@@ -245,19 +235,20 @@ long AudioDevice::getVolume()
         {
             snd_mixer_selem_get_playback_volume(elem, SND_MIXER_SCHN_FRONT_LEFT, &vol);
         }
-        
+
         if (m_mixerName == "DAC VOLUME")
         {
             // DAC VOLUME: 从 0-240 映射回 0-100%
             const long effectiveMax = 240;
-            if (vol > effectiveMax) vol = effectiveMax;
+            if (vol > effectiveMax)
+                vol = effectiveMax;
             result = vol * 100 / effectiveMax;
         }
         else if (max != min)
         {
             result = (vol - min) * 100 / (max - min);
         }
-        
+
         snd_mixer_close(handle);
         m_volumePercent.store(result, std::memory_order_relaxed);
         m_useSoftwareVolume.store(false, std::memory_order_relaxed);

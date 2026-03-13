@@ -10,13 +10,7 @@
  * @param gpioPath GPIO设备路径,如 "/sys/class/gpio/gpio12/value"
  * @details 初始化蜂鸣器对象,设置初始状态为关闭未打开
  */
-Buzzer::Buzzer(const std::string& gpioPath)
-    : m_gpioPath(gpioPath)
-    , m_fd(-1)
-    , m_isOn(false)
-    , m_isOpen(false)
-{
-}
+Buzzer::Buzzer(const std::string& gpioPath) : m_gpioPath(gpioPath), m_fd(-1), m_isOn(false), m_isOpen(false) {}
 
 /**
  * @brief 析构函数
@@ -38,7 +32,7 @@ bool Buzzer::open()
     m_fd = ::open(m_gpioPath.c_str(), O_WRONLY);
     if (m_fd < 0)
     {
-        std::cerr << "[Buzzer] Failed to open " << m_gpioPath << std::endl;
+        std::cerr << "[Buzzer] Failed to open " << m_gpioPath << '\n';
         return false;
     }
     m_isOpen = true;
@@ -74,11 +68,11 @@ bool Buzzer::writeValue(int value)
         return false;
     }
 
-    const char* val = value ? "1" : "0";
+    const char* val = static_cast<bool>(value) ? "1" : "0";
     ssize_t ret = ::write(m_fd, val, 1);
     if (ret < 0)
     {
-        std::cerr << "[Buzzer] Write failed" << std::endl;
+        std::cerr << "[Buzzer] Write failed" << '\n';
         return false;
     }
 

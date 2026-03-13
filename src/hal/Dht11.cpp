@@ -20,14 +20,7 @@ Dht11& Dht11::getInstance()
  * @param path 设备文件路径,如 "/dev/dht11"
  * @details 初始化DHT11对象,设置文件描述符为-1(未打开),温度和湿度初始值为0
  */
-Dht11::Dht11(const std::string& path)
-    : m_devPath(path)
-    , m_fd(-1)
-    , m_lastTemp(0)
-    , m_lastHumi(0)
-    , m_lastReadTime(0)
-{
-}
+Dht11::Dht11(const std::string& path) : m_devPath(path), m_fd(-1), m_lastTemp(0), m_lastHumi(0), m_lastReadTime(0) {}
 
 /**
  * @brief 析构函数
@@ -51,7 +44,7 @@ bool Dht11::open()
     m_fd = ::open(m_devPath.c_str(), O_RDONLY);
     if (m_fd < 0)
     {
-        std::cerr << "Failed to open DHT11 device: " << m_devPath << std::endl;
+        std::cerr << "Failed to open DHT11 device: " << m_devPath << '\n';
         return false;
     }
     return true;

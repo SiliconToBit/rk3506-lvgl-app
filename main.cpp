@@ -157,13 +157,13 @@ static void sigterm_handler(int sig)
 
 static int services_init(void)
 {
-    std::cout << "[Main] Initializing services..." << std::endl;
+    std::cout << "[Main] Initializing services..." << '\n';
 
     // 初始化硬件设备服务
     auto& deviceService = DeviceService::instance();
     if (!deviceService.init())
     {
-        std::cerr << "[Main] Device service init failed" << std::endl;
+        std::cerr << "[Main] Device service init failed" << '\n';
         return -1;
     }
 
@@ -177,7 +177,7 @@ static int services_init(void)
     auto& iotService = IoTService::instance();
     if (!iotService.init())
     {
-        std::cerr << "[Main] IoT service init failed" << std::endl;
+        std::cerr << "[Main] IoT service init failed" << '\n';
         return -1;
     }
 
@@ -187,27 +187,27 @@ static int services_init(void)
     // 连接 MQTT
     if (iotService.connectMqtt(APP_MQTT_HOST, APP_MQTT_PORT, APP_MQTT_CLIENT_ID))
     {
-        std::cout << "[Main] MQTT connected to " << APP_MQTT_HOST << std::endl;
+        std::cout << "[Main] MQTT connected to " << APP_MQTT_HOST << '\n';
 
         // 绑定 MQTT 线程到 CPU2
         iotService.bindMqttThreadsToCpu(2);
 
         // 启用传感器数据上报
         iotService.enableSensorReport(true, APP_SENSOR_REPORT_INTERVAL);
-        std::cout << "[Main] Sensor report enabled, interval: " << APP_SENSOR_REPORT_INTERVAL << "s" << std::endl;
+        std::cout << "[Main] Sensor report enabled, interval: " << APP_SENSOR_REPORT_INTERVAL << "s" << '\n';
     }
     else
     {
-        std::cerr << "[Main] MQTT connection failed, remote control disabled" << std::endl;
+        std::cerr << "[Main] MQTT connection failed, remote control disabled" << '\n';
     }
 
-    std::cout << "[Main] Services initialized" << std::endl;
+    std::cout << "[Main] Services initialized" << '\n';
     return 0;
 }
 
 static void services_deinit(void)
 {
-    std::cout << "[Main] Deinitializing services..." << std::endl;
+    std::cout << "[Main] Deinitializing services..." << '\n';
 
     auto& iotService = IoTService::instance();
     iotService.disableSensorReport();
@@ -217,7 +217,7 @@ static void services_deinit(void)
     auto& deviceService = DeviceService::instance();
     deviceService.deinit();
 
-    std::cout << "[Main] Services deinitialized" << std::endl;
+    std::cout << "[Main] Services deinitialized" << '\n';
 }
 
 int main(int argc, char** argv)
@@ -251,7 +251,7 @@ int main(int argc, char** argv)
 
     if (services_init() != 0)
     {
-        std::cerr << "[Main] Services init failed" << std::endl;
+        std::cerr << "[Main] Services init failed" << '\n';
         return -1;
     }
 
