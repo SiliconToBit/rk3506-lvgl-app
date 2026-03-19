@@ -17,19 +17,6 @@ namespace chrono = std::chrono;
 using namespace std::chrono_literals;
 
 /**
- * @brief 获取 Dht11 单例实例
- * @return Dht11& 单例引用
- *
- * 使用静态局部变量实现线程安全的单例模式（Meyer's Singleton）
- * 实例在首次调用时创建，程序结束时自动销毁
- */
-Dht11& Dht11::getInstance()
-{
-    static Dht11 instance{APP_DEV_DHT11};
-    return instance;
-}
-
-/**
  * @brief 构造函数
  * @param path DHT11 设备文件路径，如 "/dev/dht11"
  *

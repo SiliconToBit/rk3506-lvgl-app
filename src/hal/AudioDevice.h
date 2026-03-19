@@ -23,16 +23,17 @@ extern "C"
  * @class AudioDevice
  * @brief ALSA 音频设备管理类
  *
- * 使用延迟初始化模式，需要调用 open() 打开设备后才能播放音频
+ * 单例模式，全局只有一个音频输出设备
+ * 使用延迟初始化模式，需要调用 openDevice() 打开设备后才能播放音频
  */
 class AudioDevice
 {
 public:
     /**
-     * @brief 构造函数
-     * @param deviceName ALSA 设备名称，默认为 "default"
+     * @brief 获取单例实例
+     * @return AudioDevice& 单例引用
      */
-    explicit AudioDevice(std::string_view deviceName = "default");
+    [[nodiscard]] static AudioDevice& getInstance();
 
     /// 析构函数（自动关闭设备）
     ~AudioDevice();
@@ -118,6 +119,9 @@ private:
 
     using PcmHandlePtr = std::unique_ptr<snd_pcm_t, PcmHandleDeleter>;
     using MixerHandlePtr = std::unique_ptr<snd_mixer_t, MixerHandleDeleter>;
+
+    /// 私有构造函数（单例模式）
+    AudioDevice();
 
     std::string m_deviceName;                     ///< 设备名称
     PcmHandlePtr m_pcmHandle;                     ///< PCM 句柄

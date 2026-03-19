@@ -27,7 +27,7 @@ MusicPlayer::MusicPlayer()
     , m_stopRequest(false)
 {
     // 设置默认音量为 75% (对应 DAC VOLUME 180)
-    m_audioDevice.setVolume(75);
+    AudioDevice::getInstance().setVolume(75);
 }
 
 /**
@@ -118,7 +118,7 @@ void MusicPlayer::playbackLoop(std::string filepath)
             break;
         }
 
-        if (!m_audioDevice.openDevice(44100, 2))
+        if (!AudioDevice::getInstance().openDevice(44100, 2))
         {
             std::cerr << "Failed to open audio device" << std::endl;
             m_decoder.closeDevice();
@@ -149,10 +149,10 @@ void MusicPlayer::playbackLoop(std::string filepath)
                     if (m_stopRequest)
                         return;
                     snd_pcm_uframes_t frames = size / 4;
-                    snd_pcm_sframes_t written = m_audioDevice.write(data, frames);
+                    snd_pcm_sframes_t written = AudioDevice::getInstance().write(data, frames);
                     if (written < 0)
                     {
-                        m_audioDevice.prepare();
+                        AudioDevice::getInstance().prepare();
                     }
                 });
 
@@ -164,7 +164,7 @@ void MusicPlayer::playbackLoop(std::string filepath)
         }
 
         m_decoder.closeDevice();
-        m_audioDevice.closeDevice();
+        AudioDevice::getInstance().closeDevice();
         std::cout << "Playback finished: " << currentFile << std::endl;
 
         if (m_stopRequest || !naturalEnd || m_playlist.empty())
@@ -471,7 +471,7 @@ double MusicPlayer::getMusicDuration() const
  */
 void MusicPlayer::setVolume(long volume)
 {
-    m_audioDevice.setVolume(volume);
+    AudioDevice::getInstance().setVolume(volume);
 }
 
 /**
@@ -480,7 +480,7 @@ void MusicPlayer::setVolume(long volume)
  */
 long MusicPlayer::getVolume()
 {
-    return m_audioDevice.getVolume();
+    return AudioDevice::getInstance().getVolume();
 }
 
 /**

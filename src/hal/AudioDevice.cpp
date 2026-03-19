@@ -17,11 +17,24 @@ constexpr long DAC_VOLUME_MAX = 240;
 constexpr long DEFAULT_VOLUME = 75;
 
 /**
- * @brief 构造函数
- * @param deviceName ALSA 设备名称
+ * @brief 获取单例实例
+ * @return AudioDevice& 单例引用
+ *
+ * 使用静态局部变量实现线程安全的单例模式（Meyer's Singleton）
  */
-AudioDevice::AudioDevice(std::string_view deviceName)
-    : m_deviceName{deviceName}
+AudioDevice& AudioDevice::getInstance()
+{
+    static AudioDevice instance;
+    return instance;
+}
+
+/**
+ * @brief 构造函数
+ *
+ * 使用默认设备名称 "default"
+ */
+AudioDevice::AudioDevice()
+    : m_deviceName{"default"}
     , m_volumePercent{DEFAULT_VOLUME}
 {
 }

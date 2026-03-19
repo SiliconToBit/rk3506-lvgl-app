@@ -32,8 +32,6 @@ public:
     Dht11(Dht11&&) = delete;                 // 禁止移动构造函数
     Dht11& operator=(Dht11&&) = delete;      // 禁止移动赋值运算符
 
-    [[nodiscard]] static Dht11& getInstance(); // 获取单例实例
-
     [[nodiscard]] bool openDevice(); // 打开设备
 
     [[nodiscard]] std::optional<int> readTemperature(); // 读取温度

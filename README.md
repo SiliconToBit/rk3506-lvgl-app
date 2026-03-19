@@ -18,9 +18,6 @@ lvgl_app/
 ├── src/                    # 核心业务逻辑
 │   ├── actions/            # EEZ Studio UI 动作实现
 │   │   └── eez_actions.cpp
-│   ├── bridge/             # 应用程序桥接层
-│   │   ├── AppBridge.cpp
-│   │   └── AppBridge.h
 │   ├── data/               # 数据管理
 │   │   ├── CityData.cpp    # 城市数据（CSV解析）
 │   │   └── CityData.h
@@ -28,21 +25,22 @@ lvgl_app/
 │   │   ├── FontManager.c   # 字体管理器
 │   │   └── qweather_icons.h # 天气图标
 │   ├── hal/                # 硬件抽象层
-│   │   ├── AudioDevice.cpp # 音频设备
-│   │   ├── Backlight.cpp   # 背光控制
+│   │   ├── AudioDevice.cpp # 音频设备（单例）
+│   │   ├── Backlight.cpp   # 背光控制（单例）
 │   │   ├── Buzzer.cpp      # 蜂鸣器
 │   │   ├── Dht11.cpp       # DHT11 温湿度传感器
+│   │   ├── FileDescriptor.h # 文件描述符RAII封装
 │   │   ├── IRCommandManager.cpp # 红外命令管理
-│   │   ├── IRDevice.cpp    # 红外设备
+│   │   ├── IRDevice.cpp    # 红外设备（单例）
 │   │   ├── Led.cpp         # LED 控制
 │   │   ├── MediaDecoder.cpp # 媒体解码器
-│   │   └── Mpu6050.cpp     # MPU6050 姿态传感器
+│   │   └── Mpu6050.cpp     # MPU6050 姿态传感器（单例）
 │   ├── service/            # 后台服务模块
 │   │   ├── DeviceService.cpp   # 设备服务（LED、传感器等）
 │   │   ├── IoTService.cpp      # IoT服务（MQTT、远程控制）
 │   │   ├── MqttService.cpp     # MQTT 通信服务
 │   │   ├── MusicActionService.cpp # 音乐动作服务
-│   │   ├── MusicPlayer.cpp     # 音乐播放器
+│   │   ├── MusicPlayer.cpp     # 音乐播放器（单例）
 │   │   ├── TimeService.cpp     # 时间同步服务
 │   │   └── WeatherService.cpp  # 天气数据服务
 │   └── ui/                 # EEZ Studio 生成的UI代码
@@ -51,6 +49,117 @@ lvgl_app/
 │       └── ...
 ├── sys/                    # 系统底层接口
 └── tests/                  # 测试代码
+```
+
+## 🏗️ 架构设计
+
+### 设备管理模式
+
+项目采用两种设备管理模式：
+
+#### 1. 单例模式（全局唯一设备）
+
+适用于系统中确定只有一个的硬件设备：
+
+| 类 | 说明 | 访问方式 |
+|----|------|---------|
+| `Mpu6050` | IMU 姿态传感器 | `Mpu6050::getInstance()` |
+| `IRDevice` | 红外学习模块 | `IRDevice::getInstance()` |
+| `AudioDevice` | 音频输出设备 | `AudioDevice::getInstance()` |
+| `Backlight` | 屏幕背光 | `Backlight::getInstance()` |
+| `MusicPlayer` | 音乐播放器 | `MusicPlayer::getInstance()` |
+
+**使用示例**：
+```cpp
+// 直接通过单例访问
+float roll = Mpu6050::getInstance().getRoll();
+AudioDevice::getInstance().setVolume(75);
+Backlight::getInstance().setBrightness(50);
+```
+
+#### 2. DeviceService 管理（多实例设备）
+
+适用于可能有多个同类实例的设备：
+
+| 类 | 说明 | 管理方式 |
+|----|------|---------|
+| `Led` | LED 灯 | 通过 deviceId 区分 |
+| `Buzzer` | 蜂鸣器 | 通过 deviceId 区分 |
+| `Dht11` | 温湿度传感器 | 通过 deviceId 区分 |
+
+**使用示例**：
+```cpp
+// 在 main.cpp 中初始化设备
+DeviceService::instance().addLed("led1", APP_GPIO_LED1);
+DeviceService::instance().addDht11("dht11_1", APP_DEV_DHT11);
+
+// 添加第二个 DHT11
+DeviceService::instance().addDht11("dht11_2", "/dev/dht11_2");
+
+// 通过 deviceId 访问
+int temp1 = DeviceService::instance().getTemperature("dht11_1");
+int temp2 = DeviceService::instance().getTemperature("dht11_2");
+```
+
+### 服务层架构
+
+```
+┌─────────────────────────────────────────────────────┐
+│                    应用层 (main.cpp)                 │
+├─────────────────────────────────────────────────────┤
+│                      服务层                          │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐   │
+│  │DeviceService│ │ IoTService  │ │MusicPlayer  │   │
+│  │  (单例)     │ │  (单例)     │ │  (单例)     │   │
+│  └──────┬──────┘ └─────────────┘ └──────┬──────┘   │
+│         │                              │           │
+│         │ 管理                         │ 包含       │
+│         ▼                              ▼           │
+│  ┌─────────────┐               ┌─────────────┐    │
+│  │ Led/Buzzer/ │               │MediaDecoder │    │
+│  │   Dht11     │               │ (非单例)    │    │
+│  └─────────────┘               └─────────────┘    │
+├─────────────────────────────────────────────────────┤
+│                    HAL 层                            │
+│  ┌──────────────────────────────────────────────┐  │
+│  │ 单例设备：Mpu6050, IRDevice, AudioDevice,    │  │
+│  │          Backlight                          │  │
+│  │ 非单例设备：Led, Buzzer, Dht11               │  │
+│  └──────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────┘
+```
+
+### RAII 资源管理
+
+HAL 层使用 C++17 最佳实践管理资源：
+
+#### FileDescriptor 封装
+
+```cpp
+class FileDescriptor {
+    int m_fd{-1};
+public:
+    ~FileDescriptor() { if (m_fd >= 0) ::close(m_fd); }
+    // 禁用复制，支持移动
+};
+```
+
+**好处**：
+- 自动关闭文件描述符
+- 异常安全
+- 防止资源泄漏
+
+#### unique_ptr + 自定义删除器
+
+```cpp
+// AudioDevice 使用 unique_ptr 管理 ALSA 句柄
+struct PcmHandleDeleter {
+    void operator()(snd_pcm_t* h) const {
+        snd_pcm_drain(h);
+        snd_pcm_close(h);
+    }
+};
+std::unique_ptr<snd_pcm_t, PcmHandleDeleter> m_pcmHandle;
 ```
 
 ## 🛠️ 构建说明
@@ -115,7 +224,7 @@ make run
 - NTP 时间同步
 
 ### 🌡️ 传感器集成
-- **DHT11**: 温湿度监测
+- **DHT11**: 温湿度监测（支持多传感器）
 - **MPU6050**: 姿态检测（俯仰/横滚/航向角）
 - **红外接收**: 遥控命令解析
 
@@ -231,10 +340,34 @@ WiFi 通过 `wpa_supplicant` 管理，支持：
 
 ## 📝 开发说明
 
-### 添加新的 UI 动作
-1. 在 `src/ui/actions.h` 声明函数
-2. 在 `src/actions/eez_actions.cpp` 实现
-3. 在 EEZ Studio 中绑定事件
+### 添加新的 HAL 设备
+
+1. **确定模式**：
+   - 确定只有一个 → 使用单例模式
+   - 可能有多个 → 通过 DeviceService 管理
+
+2. **创建类**：
+   ```cpp
+   // 单例设备示例
+   class MyDevice {
+   public:
+       static MyDevice& getInstance();
+       bool openDevice();
+       // ...
+   private:
+       MyDevice();
+       FileDescriptor m_fd;  // 使用 RAII 管理资源
+   };
+   ```
+
+3. **使用 FileDescriptor**：
+   ```cpp
+   bool MyDevice::openDevice() {
+       if (m_fd.isValid()) return true;
+       m_fd = FileDescriptor{"/dev/mydevice", O_RDWR};
+       return m_fd.isValid();
+   }
+   ```
 
 ### 添加后台服务
 参考 `src/service/` 目录下的服务实现：

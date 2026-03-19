@@ -16,17 +16,38 @@ private:
     std::string m_brightnessPath;
     std::string m_maxBrightnessPath;
 
-public:
+    /// 私有构造函数（单例模式）
     explicit Backlight(std::string_view path);
+
+public:
+    /// 析构函数
     ~Backlight() = default;
 
+    // 禁用复制操作
     Backlight(const Backlight&) = delete;
     Backlight& operator=(const Backlight&) = delete;
 
+    // 禁用移动操作
+    Backlight(Backlight&&) = delete;
+    Backlight& operator=(Backlight&&) = delete;
+
+    /**
+     * @brief 获取单例实例
+     * @return Backlight& 单例引用
+     */
     static Backlight& getInstance();
 
-    void setBrightness(int level);           // 设置背光亮度
-    [[nodiscard]] int getBrightness() const; // 获取背光亮度
+    /**
+     * @brief 设置背光亮度
+     * @param level 亮度值（0-max_brightness）
+     */
+    void setBrightness(int level);
+
+    /**
+     * @brief 获取当前背光亮度
+     * @return 当前亮度值，失败返回 -1
+     */
+    [[nodiscard]] int getBrightness() const;
 };
 
 #endif // LVGL_APP_BACKLIGHT_H

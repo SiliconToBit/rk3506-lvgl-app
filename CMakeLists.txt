@@ -37,7 +37,6 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/src
     ${PROJECT_SOURCE_DIR}/src/hal
     ${PROJECT_SOURCE_DIR}/src/service
-    ${PROJECT_SOURCE_DIR}/src/bridge
     ${PROJECT_SOURCE_DIR}/src/actions
     ${PROJECT_SOURCE_DIR}/src/fonts
     ${PROJECT_SOURCE_DIR}/src/data
@@ -68,7 +67,6 @@ aux_source_directory(${PROJECT_SOURCE_DIR}/common SRCS)
 # aux_source_directory(${PROJECT_SOURCE_DIR}/ui/generated/images SRCS)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/hal SRCS)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/service SRCS)
-aux_source_directory(${PROJECT_SOURCE_DIR}/src/bridge SRCS)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/actions SRCS)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/fonts SRCS)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/ui SRCS)

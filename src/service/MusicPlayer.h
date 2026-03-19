@@ -20,7 +20,7 @@ class MusicPlayer
 {
 public:
     static MusicPlayer& getInstance();
-    
+
     MusicPlayer(const MusicPlayer&) = delete;
     MusicPlayer& operator=(const MusicPlayer&) = delete;
 
@@ -54,7 +54,7 @@ public:
 private:
     MusicPlayer();
     ~MusicPlayer();
-    
+
     struct LyricLine
     {
         double time;
@@ -73,7 +73,6 @@ private:
     std::mutex m_playMutex;
     std::condition_variable m_playCv;
 
-    AudioDevice m_audioDevice;
     MediaDecoder m_decoder;
 
     void parseLrc(const std::string& lrcContent);
