@@ -14,16 +14,16 @@ namespace CityData
 {
 
     // 静态数据存储
-    static std::vector<Province> s_provinces;
-    static bool s_initialized = false;
-    static std::string s_csvPath = "/root/China-City-List-latest.csv";
+    static std::vector<Province> s_provinces{};
+    static bool s_initialized{false};
+    static std::string s_csvPath{"/root/China-City-List-latest.csv"};
 
     static void parseCSV()
     {
         std::ifstream file(s_csvPath);
         if (!file.is_open())
         {
-            std::cerr << "[CityData] Failed to open CSV file: " << s_csvPath << std::endl;
+            std::cerr << "[CityData] Failed to open CSV file: " << s_csvPath << '\n';
             return;
         }
 
@@ -33,7 +33,7 @@ namespace CityData
         // 读取表头
         std::getline(file, line);
 
-        std::cout << "[CityData] Parsing CSV file..." << std::endl;
+        std::cout << "[CityData] Parsing CSV file..." << '\n';
 
         while (std::getline(file, line))
         {
@@ -49,10 +49,10 @@ namespace CityData
             if (cells.size() < 10)
                 continue;
 
-            std::string loc_id = cells[0];
-            std::string loc_name = cells[2];
-            std::string adm1_name = cells[7]; // 省
-            std::string adm2_name = cells[9]; // 市
+            std::string loc_id{cells[0]};
+            std::string loc_name{cells[2]};
+            std::string adm1_name{cells[7]}; // 省
+            std::string adm2_name{cells[9]}; // 市
 
             // 跳过无效数据
             if (loc_id.empty() || loc_id.find("101") != 0)
@@ -90,7 +90,7 @@ namespace CityData
         }
 
         file.close();
-        std::cout << "[CityData] Parsed " << s_provinces.size() << " provinces" << std::endl;
+        std::cout << "[CityData] Parsed " << s_provinces.size() << " provinces" << '\n';
     }
 
     static void initData()

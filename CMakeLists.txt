@@ -107,6 +107,10 @@ add_custom_target(distclean
     COMMENT "Clean all CMake generated files and ${PROJECT_NAME}"
 )
 
+# --- 编译选项 ---
+# 设为 OFF 可在无开发板时编译（跳过自动部署）
+option(ENABLE_AUTO_DEPLOY "Enable auto-deploy to target board" OFF)
+
 # --- 安装配置 ---
 set(OVERLAY_ROOT_DIR $ENV{RK3506_OVERLAY_DIR})
 if(NOT OVERLAY_ROOT_DIR)
@@ -119,28 +123,37 @@ install(TARGETS ${PROJECT_NAME}
 )
 
 # --- 自动传输到开发板 ---
-# 配置目标开发板 IP 和密码
-set(TARGET_IP "192.168.5.32")
-set(TARGET_USER "root")
-set(TARGET_PATH "/root")
-set(TARGET_PASS "luckfox")
+if(ENABLE_AUTO_DEPLOY)
+    # 配置目标开发板 IP 和密码
+    set(TARGET_IP "192.168.5.32")
+    set(TARGET_USER "root")
+    set(TARGET_PATH "/root")
+    set(TARGET_PASS "luckfox")
 
-# 添加编译后自动传输命令
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND echo "[Deploy] Stopping remote process..."
-    COMMAND sshpass -p ${TARGET_PASS} ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${TARGET_USER}@${TARGET_IP} "killall ${PROJECT_NAME} 2>/dev/null || true"
-    COMMAND echo "[Deploy] Transferring ${PROJECT_NAME} to ${TARGET_IP}:${TARGET_PATH}..."
-    COMMAND sshpass -p ${TARGET_PASS} scp -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${PROJECT_NAME} ${TARGET_USER}@${TARGET_IP}:${TARGET_PATH}/
-    COMMAND echo "[Deploy] Transfer complete!"
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    COMMENT "Auto-deploy to target board after build"
-    VERBATIM
-)
+    # 添加编译后自动传输命令
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND echo "[Deploy] Stopping remote process..."
+        COMMAND sshpass -p ${TARGET_PASS} ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${TARGET_USER}@${TARGET_IP} "killall ${PROJECT_NAME} 2>/dev/null || true"
+        COMMAND echo "[Deploy] Transferring ${PROJECT_NAME} to ${TARGET_IP}:${TARGET_PATH}..."
+        COMMAND sshpass -p ${TARGET_PASS} scp -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${PROJECT_NAME} ${TARGET_USER}@${TARGET_IP}:${TARGET_PATH}/
+        COMMAND echo "[Deploy] Transfer complete!"
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMENT "Auto-deploy to target board after build"
+        VERBATIM
+    )
 
-# --- 编译、传输并运行目标（可选）---
-add_custom_target(run
-    COMMAND echo "[Run] Starting ${PROJECT_NAME} on ${TARGET_IP}..."
-    COMMAND sshpass -p ${TARGET_PASS} ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_IP} "cd ${TARGET_PATH} && ./${PROJECT_NAME} &"
-    COMMENT "Run ${PROJECT_NAME} on target board"
-    VERBATIM
-)
+    # --- 编译、传输并运行目标（可选） ---
+    add_custom_target(run
+        COMMAND echo "[Run] Starting ${PROJECT_NAME} on ${TARGET_IP}..."
+        COMMAND sshpass -p ${TARGET_PASS} ssh -o StrictHostKeyChecking=no ${TARGET_USER}@${TARGET_IP} "cd ${TARGET_PATH} && ./${PROJECT_NAME} &"
+        COMMENT "Run ${PROJECT_NAME} on target board"
+        VERBATIM
+    )
+else()
+    # 禁用部署时的提示信息
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND echo "[Build] ${PROJECT_NAME} built successfully (auto-deploy disabled)"
+        COMMENT "Auto-deploy is disabled. Use 'cmake -DENABLE_AUTO_DEPLOY=ON ..' to enable."
+        VERBATIM
+    )
+endif()

@@ -10,7 +10,10 @@ DeviceService& DeviceService::instance()
     return instance;
 }
 
-DeviceService::DeviceService() : m_initialized(false) {}
+DeviceService::DeviceService()
+    : m_initialized(false)
+{
+}
 
 DeviceService::~DeviceService()
 {
@@ -235,7 +238,7 @@ bool DeviceService::addDht11(const std::string& deviceId, const std::string& dev
     }
 
     auto dht11 = std::make_unique<Dht11>(devPath);
-    if (!dht11->open())
+    if (!dht11->openDevice())
     {
         std::cerr << "[DeviceService] Failed to open DHT11: " << deviceId << std::endl;
         return false;
@@ -277,7 +280,8 @@ int DeviceService::getTemperature(const std::string& deviceId)
         return 0;
     }
 
-    int temp = it->second->readTemperature();
+    auto tempOpt = it->second->readTemperature();
+    int temp = tempOpt.value_or(0);
 
     auto dataIt = m_sensorDatas.find(deviceId);
     if (dataIt != m_sensorDatas.end())
@@ -302,7 +306,8 @@ int DeviceService::getHumidity(const std::string& deviceId)
         return 0;
     }
 
-    int humi = it->second->readHumidity();
+    auto humiOpt = it->second->readHumidity();
+    int humi = humiOpt.value_or(0);
 
     auto dataIt = m_sensorDatas.find(deviceId);
     if (dataIt != m_sensorDatas.end())

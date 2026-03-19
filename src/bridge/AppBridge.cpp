@@ -215,12 +215,12 @@ void bridge_get_weather_data(AppWeatherData* data)
 
 int bridge_get_temp(void)
 {
-    return Dht11::getInstance().readTemperature();
+    return Dht11::getInstance().readTemperature().value_or(0);
 }
 
 int bridge_get_humi(void)
 {
-    return Dht11::getInstance().readHumidity();
+    return Dht11::getInstance().readHumidity().value_or(0);
 }
 
 // ========== 背光控制 ==========

@@ -1,43 +1,47 @@
-/**
- * @file Dht11.h
- * @brief DHT11 温湿度传感器管理类
- * @details 负责读取 DHT11 传感器的温度和湿度数据，使用单例模式
- */
+#pragma once
 
-#ifndef LVGL_APP_HAL_DHT11_H
-#define LVGL_APP_HAL_DHT11_H
-
-#include <ctime>
+#include <chrono>
+#include <optional>
 #include <string>
+#include <string_view>
 
 class Dht11
 {
-private:
-    std::string m_devPath;
-    int m_fd;
-    int m_lastTemp;
-    int m_lastHumi;
-    time_t m_lastReadTime;
+public:
+    struct Data
+    {
+        int temperature;
+        int humidity;
+    };
 
-    void updateData();
+private:
+    std::string m_devPath;                                  // 设备路径
+    int m_fd{-1};                                           // 设备文件描述符
+    Data m_lastData{};                                      // 最近一次读取到的数据
+    std::chrono::steady_clock::time_point m_lastReadTime{}; // 最近一次读取时间
+
+    [[nodiscard]] bool updateData(); // 更新数据
 
 public:
-    explicit Dht11(const std::string& path);
-    ~Dht11();
+    explicit Dht11(std::string_view path); // 构造函数
+    ~Dht11();                              // 析构函数
 
-    Dht11(const Dht11&) = delete;
-    Dht11& operator=(const Dht11&) = delete;
+    Dht11(const Dht11&) = delete;            // 禁用复制构造函数
+    Dht11& operator=(const Dht11&) = delete; // 禁用复制赋值运算符
+    Dht11(Dht11&&) = delete;                 // 禁用移动构造函数
+    Dht11& operator=(Dht11&&) = delete;      // 禁用移动赋值运算符
 
-    /**
-     * @brief 获取单例实例（使用默认设备路径）
-     * @return Dht11& 单例引用
-     */
-    static Dht11& getInstance();
+    [[nodiscard]] static Dht11& getInstance(); // 获取单例实例
 
-    bool open();
-    void close();
-    int readTemperature();
-    int readHumidity();
+    [[nodiscard]] bool openDevice(); // 打开设备
+    void closeDevice() noexcept;     // 关闭设备
+
+    [[nodiscard]] std::optional<int> readTemperature(); // 读取温度
+    [[nodiscard]] std::optional<int> readHumidity();    // 读取湿度
+    [[nodiscard]] std::optional<Data> readAll();        // 读取所有数据
+
+    [[nodiscard]] bool isOpen() const noexcept // 检查设备是否打开
+    {
+        return m_fd >= 0;
+    }
 };
-
-#endif // LVGL_APP_HAL_DHT11_H

@@ -20,3 +20,8 @@ IndentCaseLabels: true
 AccessModifierOffset: -4
 NamespaceIndentation: All
 FixNamespaceComments: true
+
+# 构造函数初始化列表格式
+BreakConstructorInitializers: BeforeComma
+ConstructorInitializerIndentWidth: 4
+PackConstructorInitializers: Never

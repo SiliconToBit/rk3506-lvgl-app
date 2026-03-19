@@ -6,7 +6,7 @@
 #ifndef __MAIN_H__
 #define __MAIN_H__
 
-// 仅保留主程序必需的头文件 
+// 仅保留主程序必需的头文件
 
 #include <lvgl/lvgl.h>
 
