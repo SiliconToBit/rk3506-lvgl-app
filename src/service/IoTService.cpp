@@ -37,9 +37,8 @@ bool IoTService::init()
 {
     m_mqtt = std::make_unique<MqttService>();
 
-    m_mqtt->setMessageCallback([this](const std::string& topic, const std::string& payload) {
-        handleMqttMessage(topic, payload);
-    });
+    m_mqtt->setMessageCallback([this](const std::string& topic, const std::string& payload)
+                               { handleMqttMessage(topic, payload); });
 
     m_initialized = true;
     std::cout << "[IoTService] Initialized" << std::endl;
@@ -152,9 +151,8 @@ void IoTService::reportSensorData(int temperature, int humidity)
     }
 
     char payload[256];
-    snprintf(payload, sizeof(payload),
-             "{\"temperature\":%d,\"humidity\":%d,\"timestamp\":%ld}",
-             temperature, humidity, std::time(nullptr));
+    snprintf(payload, sizeof(payload), "{\"temperature\":%d,\"humidity\":%d,\"timestamp\":%ld}", temperature, humidity,
+             std::time(nullptr));
 
     std::string topic = m_sensorTopic + "/dht11";
     m_mqtt->publish(topic, payload);
@@ -245,7 +243,7 @@ bool IoTService::initIrCommandManager(const std::string& dataPath)
     IRDevice& irDevice = IRDevice::getInstance();
     if (!irDevice.isOpen())
     {
-        if (irDevice.open())
+        if (irDevice.openDevice())
         {
             std::cout << "[IoTService] IR device opened" << std::endl;
         }
@@ -488,12 +486,8 @@ std::string IoTService::mapIrDevice(const std::string& device)
 std::string IoTService::mapIrCommand(const std::string& cmd)
 {
     static const std::unordered_map<std::string, std::string> cmdMap = {
-        {"POWER_ON", "开"},
-        {"POWER_OFF", "关"},
-        {"TEMP_UP", "升温"},
-        {"TEMP_DOWN", "降温"},
-        {"MODE_COOL", "制冷"},
-        {"MODE_HEAT", "制热"},
+        {"POWER_ON", "开"},    {"POWER_OFF", "关"},   {"TEMP_UP", "升温"},
+        {"TEMP_DOWN", "降温"}, {"MODE_COOL", "制冷"}, {"MODE_HEAT", "制热"},
     };
 
     auto it = cmdMap.find(cmd);
@@ -506,12 +500,18 @@ std::string IoTService::mapIrCommand(const std::string& cmd)
 
 std::vector<std::string> IoTService::buildIrCommandCandidates(const std::string& cmd)
 {
-    if (cmd == "POWER_ON") return {"开", "开机", "电源", "开关"};
-    if (cmd == "POWER_OFF") return {"关", "关机", "电源", "开关"};
-    if (cmd == "TEMP_UP") return {"温度+", "升温", "加温", "温度上调"};
-    if (cmd == "TEMP_DOWN") return {"温度-", "降温", "减温", "温度下调"};
-    if (cmd == "MODE_COOL") return {"制冷", "模式-制冷", "冷风"};
-    if (cmd == "MODE_HEAT") return {"制热", "模式-制热", "暖风"};
+    if (cmd == "POWER_ON")
+        return {"开", "开机", "电源", "开关"};
+    if (cmd == "POWER_OFF")
+        return {"关", "关机", "电源", "开关"};
+    if (cmd == "TEMP_UP")
+        return {"温度+", "升温", "加温", "温度上调"};
+    if (cmd == "TEMP_DOWN")
+        return {"温度-", "降温", "减温", "温度下调"};
+    if (cmd == "MODE_COOL")
+        return {"制冷", "模式-制冷", "冷风"};
+    if (cmd == "MODE_HEAT")
+        return {"制热", "模式-制热", "暖风"};
     return {};
 }
 
@@ -527,12 +527,18 @@ std::string IoTService::resolveIrCommandFromStore(const std::string& deviceName,
     }
 
     // 没有候选命中时，返回兼容旧逻辑的默认映射
-    if (cmd == "POWER_ON") return "开";
-    if (cmd == "POWER_OFF") return "关";
-    if (cmd == "TEMP_UP") return "升温";
-    if (cmd == "TEMP_DOWN") return "降温";
-    if (cmd == "MODE_COOL") return "制冷";
-    if (cmd == "MODE_HEAT") return "制热";
+    if (cmd == "POWER_ON")
+        return "开";
+    if (cmd == "POWER_OFF")
+        return "关";
+    if (cmd == "TEMP_UP")
+        return "升温";
+    if (cmd == "TEMP_DOWN")
+        return "降温";
+    if (cmd == "MODE_COOL")
+        return "制冷";
+    if (cmd == "MODE_HEAT")
+        return "制热";
     return "";
 }
 
@@ -547,12 +553,8 @@ std::string IoTService::buildIrAckTopic(const std::string& commandTopic)
     return commandTopic + "/ack";
 }
 
-void IoTService::publishIrAck(const std::string& commandTopic,
-                               const std::string& requestId,
-                               const std::string& device,
-                               const std::string& command,
-                               bool success,
-                               const std::string& message)
+void IoTService::publishIrAck(const std::string& commandTopic, const std::string& requestId, const std::string& device,
+                              const std::string& command, bool success, const std::string& message)
 {
     if (!isMqttConnected())
     {
@@ -561,11 +563,7 @@ void IoTService::publishIrAck(const std::string& commandTopic,
 
     const std::string ackTopic = buildIrAckTopic(commandTopic);
     json ack = {
-        {"request_id", requestId},
-        {"ok", success},
-        {"device", device},
-        {"command", command},
-        {"msg", message},
+        {"request_id", requestId}, {"ok", success}, {"device", device}, {"command", command}, {"msg", message},
     };
     m_mqtt->publish(ackTopic, ack.dump());
 }

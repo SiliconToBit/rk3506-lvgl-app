@@ -4,38 +4,40 @@
  * @details 通过GPIO或PWM控制蜂鸣器的开关和频率
  */
 
-#ifndef LVGL_APP_HAL_BUZZER_H
-#define LVGL_APP_HAL_BUZZER_H
+#pragma once
 
+#include "FileDescriptor.h"
+#include <optional>
 #include <string>
+#include <string_view>
 
 class Buzzer
 {
 public:
-    explicit Buzzer(const std::string& gpioPath);
-    ~Buzzer();
+    explicit Buzzer(std::string_view path); // 构造函数
+    ~Buzzer() = default;                       // 析构函数
 
-    Buzzer(const Buzzer&) = delete;
-    Buzzer& operator=(const Buzzer&) = delete;
+    Buzzer(const Buzzer&) = delete;            // 禁用复制构造函数
+    Buzzer& operator=(const Buzzer&) = delete; // 禁用复制赋值运算符
 
-    bool open();
-    void close();
+    Buzzer(Buzzer&&) = delete;            // 禁止移动构造函数
+    Buzzer& operator=(Buzzer&&) = delete; // 禁止移动赋值运算符
 
-    bool setOn();
-    bool setOff();
-    bool beep(int durationMs);
-    bool beepPattern(int onMs, int offMs, int count);
+    [[nodiscard]] bool openDevice(); // 打开设备
 
-    bool isOn() const;
-    bool isOpen() const;
+    [[nodiscard]] bool setOn();                                     // 设置蜂鸣器为开状态
+    [[nodiscard]] bool setOff();                                    // 设置蜂鸣器为关状态
+    [[nodiscard]] bool beep(int durationMs);                        // 指续蜂鸣
+    [[nodiscard]] bool beepPattern(int onMs, int offMs, int count); // 指续蜂鸣,并重复指定次数
+
+    [[nodiscard]] bool isOn() const;   // 是否蜂鸣器为开状态
+    [[nodiscard]] bool isOpen() const; // 是否打开设备
 
 private:
-    std::string m_gpioPath;
-    int m_fd;
-    bool m_isOn;
-    bool m_isOpen;
+    std::string m_devPath; // 设备路径,如 "/sys/class/gpio/gpio12/value"
+    FileDescriptor m_fd;   // 设备文件描述符
+    bool m_isOn;           // 是否蜂鸣器为开状态
+    bool m_isOpen;         // 是否打开设备
 
-    bool writeValue(int value);
+    bool writeValue(int value); // 写入值到设备文件
 };
-
-#endif

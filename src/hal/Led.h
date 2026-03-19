@@ -7,30 +7,33 @@
 #ifndef LVGL_APP_HAL_LED_H
 #define LVGL_APP_HAL_LED_H
 
+#include "FileDescriptor.h"
 #include <string>
 
 class Led
 {
 public:
-    explicit Led(const std::string& gpioPath);
-    ~Led();
+    explicit Led(std::string_view path);
+    ~Led() = default;
 
     Led(const Led&) = delete;
     Led& operator=(const Led&) = delete;
 
-    bool open();
-    void close();
+    Led(Led&&) = delete;
+    Led& operator=(Led&&) = delete;
 
-    bool setOn();
-    bool setOff();
-    bool toggle();
+    [[nodiscard]] bool openDevice();
 
-    bool isOn() const;
-    bool isOpen() const;
+    [[nodiscard]] bool setOn();
+    [[nodiscard]] bool setOff();
+    [[nodiscard]] bool toggle();
+
+    [[nodiscard]] bool isOn() const;
+    [[nodiscard]] bool isOpen() const;
 
 private:
-    std::string m_gpioPath;
-    int m_fd;
+    std::string m_devPath;
+    FileDescriptor m_fd;
     bool m_isOn;
     bool m_isOpen;
 

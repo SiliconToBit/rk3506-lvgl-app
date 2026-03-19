@@ -2,9 +2,6 @@
 #include "../AppConfig.h"
 
 #include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 
 /**
@@ -23,31 +20,27 @@ Backlight& Backlight::getInstance()
  * @param path 背光设备sysfs路径
  * @details 初始化亮度和最大亮度文件路径
  */
-Backlight::Backlight(const std::string& path)
-    : m_brightnessPath(path + "brightness"), m_maxBrightnessPath(path + "/max_brightness")
+Backlight::Backlight(std::string_view path)
+    : m_brightnessPath{std::string(path) + "/brightness"}
+    , m_maxBrightnessPath{std::string(path) + "/max_brightness"}
 {
 }
 
 /**
- * @brief 析构函数
- */
-Backlight::~Backlight() {}
-
-/**
  * @brief 设置屏幕亮度
- * @param brightness 亮度值(0-max_brightness)
+ * @param level 亮度值(0-max_brightness)
  * @details 向sysfs brightness文件写入亮度值
  */
-void Backlight::setBrightness(int brightness)
+void Backlight::setBrightness(int level)
 {
     FILE* file = fopen(m_brightnessPath.c_str(), "w");
-    if (!file)
+    if (file == nullptr)
     {
-        std::cerr << "Failed to open file " << m_brightnessPath.c_str() << std::endl;
+        std::cerr << "Failed to open file " << m_brightnessPath.c_str() << '\n';
         return;
     }
 
-    fprintf(file, "%d\n", brightness);
+    fprintf(file, "%d\n", level);
     fclose(file);
 }
 
@@ -59,9 +52,9 @@ void Backlight::setBrightness(int brightness)
 int Backlight::getBrightness() const
 {
     FILE* file = fopen(m_brightnessPath.c_str(), "r");
-    if (!file)
+    if (file == nullptr)
     {
-        std::cerr << "Failed to open file " << m_brightnessPath.c_str() << std::endl;
+        std::cerr << "Failed to open file " << m_brightnessPath.c_str() << '\n';
         return -1;
     }
     int value;

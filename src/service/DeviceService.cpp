@@ -50,7 +50,7 @@ bool DeviceService::addLed(const std::string& deviceId, const std::string& gpioP
     }
 
     auto led = std::make_unique<Led>(gpioPath);
-    if (!led->open())
+    if (!led->openDevice())
     {
         std::cerr << "[DeviceService] Failed to open LED: " << deviceId << std::endl;
         return false;
@@ -148,7 +148,7 @@ bool DeviceService::addBuzzer(const std::string& deviceId, const std::string& gp
     }
 
     auto buzzer = std::make_unique<Buzzer>(gpioPath);
-    if (!buzzer->open())
+    if (!buzzer->openDevice())
     {
         std::cerr << "[DeviceService] Failed to open Buzzer: " << deviceId << std::endl;
         return false;

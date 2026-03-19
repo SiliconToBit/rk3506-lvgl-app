@@ -112,16 +112,16 @@ void MusicPlayer::playbackLoop(std::string filepath)
 
     while (!m_stopRequest)
     {
-        if (!m_decoder.open(currentFile.c_str()))
+        if (!m_decoder.openDevice(currentFile.c_str()))
         {
             std::cerr << "Failed to open file: " << currentFile << std::endl;
             break;
         }
 
-        if (!m_audioDevice.open(44100, 2))
+        if (!m_audioDevice.openDevice(44100, 2))
         {
             std::cerr << "Failed to open audio device" << std::endl;
-            m_decoder.close();
+            m_decoder.closeDevice();
             break;
         }
 
@@ -143,16 +143,18 @@ void MusicPlayer::playbackLoop(std::string filepath)
                 break;
             }
 
-            bool success = m_decoder.decode([this](uint8_t* data, int size) {
-                if (m_stopRequest)
-                    return;
-                snd_pcm_uframes_t frames = size / 4;
-                snd_pcm_sframes_t written = m_audioDevice.write(data, frames);
-                if (written < 0)
+            bool success = m_decoder.decode(
+                [this](uint8_t* data, int size)
                 {
-                    m_audioDevice.prepare();
-                }
-            });
+                    if (m_stopRequest)
+                        return;
+                    snd_pcm_uframes_t frames = size / 4;
+                    snd_pcm_sframes_t written = m_audioDevice.write(data, frames);
+                    if (written < 0)
+                    {
+                        m_audioDevice.prepare();
+                    }
+                });
 
             if (!success)
             {
@@ -161,8 +163,8 @@ void MusicPlayer::playbackLoop(std::string filepath)
             }
         }
 
-        m_decoder.close();
-        m_audioDevice.close();
+        m_decoder.closeDevice();
+        m_audioDevice.closeDevice();
         std::cout << "Playback finished: " << currentFile << std::endl;
 
         if (m_stopRequest || !naturalEnd || m_playlist.empty())
@@ -193,7 +195,7 @@ void MusicPlayer::playbackLoop(std::string filepath)
 void MusicPlayer::playFile(const std::string& filepath)
 {
     stop();
-    m_decoder.close();
+    m_decoder.closeDevice();
 
     m_stopRequest = false;
     m_paused = false;
@@ -258,10 +260,10 @@ void MusicPlayer::loadMusic(int index)
     {
         m_currentIndex = index;
         stop();
-        m_decoder.close();
+        m_decoder.closeDevice();
 
         std::string filepath = m_playlist[m_currentIndex];
-        if (m_decoder.open(filepath.c_str()))
+        if (m_decoder.openDevice(filepath.c_str()))
         {
             parseLrc(getCurrentSongLyrics());
             std::cout << "Loaded music: " << filepath << std::endl;
@@ -410,8 +412,7 @@ std::string MusicPlayer::getCurrentSongLyrics() const
             std::ifstream file(lrcPath);
             if (file.is_open())
             {
-                std::string content((std::istreambuf_iterator<char>(file)),
-                                    std::istreambuf_iterator<char>());
+                std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
                 return content;
             }
         }

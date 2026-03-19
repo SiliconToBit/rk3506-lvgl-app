@@ -1,5 +1,7 @@
 #include "Led.h"
+#include "FileDescriptor.h"
 #include <fcntl.h>
+#include <string_view>
 #include <unistd.h>
 #include <iostream>
 #include <cstring>
@@ -9,21 +11,11 @@
  * @param gpioPath GPIO设备路径,如 "/sys/class/gpio/gpio10/value"
  * @details 初始化LED对象,设置初始状态为关闭未打开
  */
-Led::Led(const std::string& gpioPath)
-    : m_gpioPath(gpioPath)
-    , m_fd(-1)
-    , m_isOn(false)
-    , m_isOpen(false)
+Led::Led(std::string_view path)
+    : m_devPath{path}
+    , m_isOn{false}
+    , m_isOpen{false}
 {
-}
-
-/**
- * @brief 析构函数
- * @details 自动关闭GPIO设备,释放资源
- */
-Led::~Led()
-{
-    close();
 }
 
 /**
@@ -32,30 +24,20 @@ Led::~Led()
  * @return false 打开失败
  * @details 以只写方式打开GPIO设备文件,用于控制LED开关
  */
-bool Led::open()
+bool Led::openDevice()
 {
-    m_fd = ::open(m_gpioPath.c_str(), O_WRONLY);
-    if (m_fd < 0)
+    if (m_fd.isValid())
     {
-        std::cerr << "[Led] Failed to open " << m_gpioPath << std::endl;
+        return true;
+    }
+    m_fd = FileDescriptor(m_devPath.c_str(), O_WRONLY);
+    if (!m_fd.isValid())
+    {
+        std::cerr << "[Led] Failed to open " << m_devPath << '\n';
         return false;
     }
     m_isOpen = true;
     return true;
-}
-
-/**
- * @brief 关闭GPIO设备
- * @details 关闭文件描述符,重置状态标志
- */
-void Led::close()
-{
-    if (m_fd >= 0)
-    {
-        ::close(m_fd);
-        m_fd = -1;
-    }
-    m_isOpen = false;
 }
 
 /**
@@ -67,16 +49,16 @@ void Led::close()
  */
 bool Led::writeValue(int value)
 {
-    if (m_fd < 0)
+    if (!m_fd.isValid())
     {
         return false;
     }
 
-    const char* val = value ? "1" : "0";
-    ssize_t ret = ::write(m_fd, val, 1);
+    const char* val = value != 0 ? "1" : "0";
+    ssize_t ret = m_fd.write(val, 1);
     if (ret < 0)
     {
-        std::cerr << "[Led] Write failed" << std::endl;
+        std::cerr << "[Led] Write failed" << '\n';
         return false;
     }
 

@@ -404,7 +404,7 @@ int bridge_ir_init(const char* devPath)
         return -1;
     }
 
-    if (!s_irDevice->open())
+    if (!s_irDevice->openDevice())
     {
         std::cerr << "[Bridge] Failed to open IR device: " << devPath << std::endl;
         delete s_irDevice;

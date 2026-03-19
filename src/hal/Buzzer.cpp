@@ -1,5 +1,6 @@
 #include "Buzzer.h"
 #include <fcntl.h>
+#include <string_view>
 #include <unistd.h>
 #include <iostream>
 #include <thread>
@@ -10,15 +11,11 @@
  * @param gpioPath GPIO设备路径,如 "/sys/class/gpio/gpio12/value"
  * @details 初始化蜂鸣器对象,设置初始状态为关闭未打开
  */
-Buzzer::Buzzer(const std::string& gpioPath) : m_gpioPath(gpioPath), m_fd(-1), m_isOn(false), m_isOpen(false) {}
-
-/**
- * @brief 析构函数
- * @details 自动关闭蜂鸣器并释放GPIO资源
- */
-Buzzer::~Buzzer()
+Buzzer::Buzzer(std::string_view path)
+    : m_devPath{path}
+    , m_isOn{false}
+    , m_isOpen{false}
 {
-    close();
 }
 
 /**
@@ -27,31 +24,20 @@ Buzzer::~Buzzer()
  * @return false 打开失败
  * @details 以只写方式打开GPIO设备文件,用于控制蜂鸣器
  */
-bool Buzzer::open()
+bool Buzzer::openDevice()
 {
-    m_fd = ::open(m_gpioPath.c_str(), O_WRONLY);
-    if (m_fd < 0)
+    if (m_fd.isValid())
     {
-        std::cerr << "[Buzzer] Failed to open " << m_gpioPath << '\n';
+        return true;
+    }
+    m_fd = FileDescriptor(m_devPath.c_str(), O_WRONLY);
+    if (!m_fd.isValid())
+    {
+        std::cerr << "[Buzzer] Failed to open " << m_devPath << '\n';
         return false;
     }
     m_isOpen = true;
     return true;
-}
-
-/**
- * @brief 关闭GPIO设备
- * @details 先关闭蜂鸣器,再关闭文件描述符,重置状态标志
- */
-void Buzzer::close()
-{
-    if (m_fd >= 0)
-    {
-        setOff();
-        ::close(m_fd);
-        m_fd = -1;
-    }
-    m_isOpen = false;
 }
 
 /**
@@ -63,14 +49,14 @@ void Buzzer::close()
  */
 bool Buzzer::writeValue(int value)
 {
-    if (m_fd < 0)
+    if (!m_fd.isValid())
     {
         return false;
     }
 
     const char* val = static_cast<bool>(value) ? "1" : "0";
-    ssize_t ret = ::write(m_fd, val, 1);
-    if (ret < 0)
+    ssize_t ret = m_fd.write(val, 1);
+    if (ret != 1)
     {
         std::cerr << "[Buzzer] Write failed" << '\n';
         return false;

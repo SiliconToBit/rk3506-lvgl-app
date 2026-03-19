@@ -8,6 +8,7 @@
 #define LVGL_APP_BACKLIGHT_H
 
 #include <string>
+#include <string_view>
 
 class Backlight
 {
@@ -16,20 +17,16 @@ private:
     std::string m_maxBrightnessPath;
 
 public:
-    explicit Backlight(const std::string& path);
-    ~Backlight();
+    explicit Backlight(std::string_view path);
+    ~Backlight() = default;
 
     Backlight(const Backlight&) = delete;
     Backlight& operator=(const Backlight&) = delete;
 
-    /**
-     * @brief 获取单例实例（使用默认设备路径）
-     * @return Backlight& 单例引用
-     */
     static Backlight& getInstance();
 
-    void setBrightness(int level);
-    int getBrightness() const;
+    void setBrightness(int level);           // 设置背光亮度
+    [[nodiscard]] int getBrightness() const; // 获取背光亮度
 };
 
 #endif // LVGL_APP_BACKLIGHT_H
