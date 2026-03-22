@@ -15,13 +15,12 @@ class Buzzer
 {
 public:
     explicit Buzzer(std::string_view path); // 构造函数
-    ~Buzzer() = default;                       // 析构函数
+    ~Buzzer() = default;                    // 析构函数
 
     Buzzer(const Buzzer&) = delete;            // 禁用复制构造函数
     Buzzer& operator=(const Buzzer&) = delete; // 禁用复制赋值运算符
-
-    Buzzer(Buzzer&&) = delete;            // 禁止移动构造函数
-    Buzzer& operator=(Buzzer&&) = delete; // 禁止移动赋值运算符
+    Buzzer(Buzzer&&) = delete;                 // 禁止移动构造函数
+    Buzzer& operator=(Buzzer&&) = delete;      // 禁止移动赋值运算符
 
     [[nodiscard]] bool openDevice(); // 打开设备
 
@@ -34,10 +33,10 @@ public:
     [[nodiscard]] bool isOpen() const; // 是否打开设备
 
 private:
-    std::string m_devPath; // 设备路径,如 "/sys/class/gpio/gpio12/value"
-    FileDescriptor m_fd;   // 设备文件描述符
-    bool m_isOn;           // 是否蜂鸣器为开状态
-    bool m_isOpen;         // 是否打开设备
+    std::string m_devPath{}; // 设备路径,如 "/sys/class/gpio/gpio12/value"
+    FileDescriptor m_fd{};   // 设备文件描述符
+    bool m_isOn{};           // 是否蜂鸣器为开状态
+    bool m_isOpen{};         // 是否打开设备
 
     bool writeValue(int value); // 写入值到设备文件
 };

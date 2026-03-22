@@ -6,7 +6,6 @@
  */
 
 #include "Dht11.h"
-#include "../AppConfig.h"
 
 #include <array>
 #include <chrono>
@@ -79,9 +78,9 @@ bool Dht11::updateData()
 
     // 从设备文件读取数据
     std::array<char, 32> buf{};
-    ssize_t n = m_fd.read(buf.data(), buf.size() - 1);
+    ssize_t bytesRead = m_fd.read(buf.data(), buf.size() - 1);
 
-    if (n > 0)
+    if (bytesRead > 0)
     {
         int temp{};
         int humi{};
