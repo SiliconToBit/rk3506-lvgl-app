@@ -13,7 +13,6 @@
 #include <array>
 #include <chrono>
 #include <cstdint>
-#include <optional>
 #include <string>
 #include <string_view>
 
@@ -161,6 +160,8 @@ private:
         std::array<std::array<float, 2>, 2> P{{{{0.0F, 0.0F}}, {{0.0F, 0.0F}}}}; ///< 误差协方差矩阵
     };
 
+
+    
     std::string m_devPath;                            ///< 设备路径
     FileDescriptor m_fd;                              ///< 文件描述符
     KalmanState m_kalmanX;                            ///< X轴卡尔曼滤波器

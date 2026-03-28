@@ -28,8 +28,14 @@ public:
     [[nodiscard]] bool setOff();
     [[nodiscard]] bool toggle();
 
-    [[nodiscard]] bool isOn() const;
-    [[nodiscard]] bool isOpen() const;
+    [[nodiscard]] bool isOn() const noexcept
+    {
+        return m_isOn;
+    }
+    [[nodiscard]] bool isOpen() const noexcept
+    {
+        return m_fd.isValid();
+    }
 
 private:
     std::string m_devPath;

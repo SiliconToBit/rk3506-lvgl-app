@@ -96,23 +96,3 @@ bool Led::toggle()
 {
     return m_isOn ? setOff() : setOn();
 }
-
-/**
- * @brief 获取LED当前状态
- * @return true LED处于打开状态
- * @return false LED处于关闭状态
- */
-bool Led::isOn() const
-{
-    return m_isOn;
-}
-
-/**
- * @brief 获取设备打开状态
- * @return true 设备已打开
- * @return false 设备未打开
- */
-bool Led::isOpen() const
-{
-    return m_isOpen;
-}

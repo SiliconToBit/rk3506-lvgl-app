@@ -29,8 +29,14 @@ public:
     [[nodiscard]] bool beep(int durationMs);                        // 指续蜂鸣
     [[nodiscard]] bool beepPattern(int onMs, int offMs, int count); // 指续蜂鸣,并重复指定次数
 
-    [[nodiscard]] bool isOn() const;   // 是否蜂鸣器为开状态
-    [[nodiscard]] bool isOpen() const; // 是否打开设备
+    [[nodiscard]] bool isOn() const noexcept // 是否蜂鸣器为开状态
+    {
+        return m_isOn;
+    }
+    [[nodiscard]] bool isOpen() const noexcept // 是否打开设备
+    {
+        return m_fd.isValid();
+    }
 
 private:
     std::string m_devPath{}; // 设备路径,如 "/sys/class/gpio/gpio12/value"

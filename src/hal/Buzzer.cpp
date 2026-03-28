@@ -130,23 +130,3 @@ bool Buzzer::beepPattern(int onMs, int offMs, int count)
     }
     return true;
 }
-
-/**
- * @brief 获取蜂鸣器当前状态
- * @return true 蜂鸣器处于打开状态
- * @return false 蜂鸣器处于关闭状态
- */
-bool Buzzer::isOn() const
-{
-    return m_isOn;
-}
-
-/**
- * @brief 获取设备打开状态
- * @return true 设备已打开
- * @return false 设备未打开
- */
-bool Buzzer::isOpen() const
-{
-    return m_isOpen;
-}
